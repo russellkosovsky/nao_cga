@@ -188,13 +188,13 @@ def main():
 
 def test_population():
     pop_size = 5
-    num individuals = 2
-
     population = [create_individual() for _ in range(pop_size)]
-    
     for individual in population:
-        print("Individual:", individual)
-        print("")
+        print("----------------------------------------------------")
+        print("Individual:", individual)   
+        for i, motor in enumerate(motors):
+            print(f"Motor {i}: {motor.getName()} \n Amplitude: {individual['amplitude'][i]:.3f}, \n Phase: {individual['phase'][i]:.3f}, \n Offset: {individual['offset'][i]:.3f}")
+        print("----------------------------------------------------")
 
 
 def run_individual(individual):

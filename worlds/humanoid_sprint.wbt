@@ -29,8 +29,8 @@ WorldInfo {
   ]
 }
 Viewpoint {
-  orientation -0.19809720573301803 0.09824664160653288 0.9752461712274535 2.240601920132737
-  position -3.394050354491887 -2.056443249426749 1.713569843128571
+  orientation -0.06519466660586283 0.06923137233520645 0.9954680670572683 1.5153340021091608
+  position -4.94449537721038 -3.8329186001308853 0.9285834897899582
   followType "None"
 }
 TexturedBackground {
@@ -113,7 +113,7 @@ DEF GRASS Solid {
 }
 DEF NAO Nao {
   translation -5.345 0.65 0.334
-  controller "nao_ga"
+  controller "nao_cga"
   supervisor TRUE
   selfCollision TRUE
 }
