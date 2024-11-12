@@ -38,15 +38,12 @@ for motor in motors:
     
 robot.getDevice("RShoulderPitch").setPosition(1.1)  ##move right arm down
 robot.getDevice("LShoulderPitch").setPosition(1.1)  ##move left arm down
-    
+
 # Get the initial position and rotation of the robot
 root = robot.getRoot()  ##get the root node of the robot
 children_field = root.getField("children")  ##get the children field of the root node
-
-
 robot_node = next((children_field.getMFNode(i) for i in range(children_field.getCount())
                    if children_field.getMFNode(i).getTypeName() == "Nao"), None)
-
 translation_field = robot_node.getField("translation")  
 rotation_field = robot_node.getField("rotation")
 initial_position = translation_field.getSFVec3f()  ##
@@ -61,7 +58,6 @@ def get_joint_limits():
         print(f"{name}: min_position={min_position}, max_position={max_position}")
     robot.step(TIME_STEP)  # Run a single simulation step to initialize devices
 
-
 # Create an individual with random motor parameters
 def create_individual():
     return {
@@ -71,62 +67,99 @@ def create_individual():
         "fitness": 0.0  ##fitness value of the individual
     }
 
+def create_binary_individual():
+    return {
+        "amplitude": [format(random.randint(0, 15), '04b') for _ in range(PARAMS)],  ##amplitude of the sine wave
+        "phase": [format(random.randint(0, 15), '04b') for _ in range(PARAMS)],  ##phase of the sine wave
+        "offset": [format(random.randint(0, 15), '04b') for _ in range(PARAMS)],  ##offset of the sine wave
+        "fitness": 0.0  ##fitness value of the individual
+    }
 
+def convert_binary_to_float(individual):
+    for i in range(PARAMS):
+        individual["amplitude"][i] = int(individual["amplitude"][i], 2) / 15.0
+        individual["phase"][i] = int(individual["phase"][i], 2) / 15.0
+        individual["offset"][i] = int(individual["offset"][i], 2) / 15.0
+    return individual
+
+def test_population():
+    pop_size = 5
+    #population = [create_individual() for _ in range(pop_size)]
+    population = [create_binary_individual() for _ in range(pop_size)]
+    for individual in population:
+        print("----------------------------------------------------")
+        print("Individual binary:", individual)   
+        individual = convert_binary_to_float(individual)
+        print("Individual binary:", individual)   
+
+        for i, motor in enumerate(motors):
+            #apply clamping
+            motor_name = motor.getName()
+            if motor_name in JOINT_LIMITS:
+                min_limit, max_limit = JOINT_LIMITS[motor_name]
+                individual["amplitude"][i] = clamp(individual["amplitude"][i], min_limit, max_limit)
+                individual["phase"][i] = clamp(individual["phase"][i], min_limit, max_limit)
+                individual["offset"][i] = clamp(individual["offset"][i], min_limit, max_limit)
+
+            print(f"Motor {i}: {motor.getName()} \n Amplitude: {individual['amplitude'][i]:.3f}, \n Phase: {individual['phase'][i]:.3f}, \n Offset: {individual['offset'][i]:.3f}")
+        print("----------------------------------------------------")
+
+###########################################################################
 # Clamp a value within a specific range
+###########################################################################
 def clamp(value, min_value, max_value):
     return max(min(value, max_value), min_value)
 
-
-# Function to reset the robot to the initial state
+###########################################################################
+# Reset the robot to the initial state
+###########################################################################
 def reset_robot():
     for motor in motors:
-        motor.setPosition(0.0)  ##set all motors to default position
-    
+        motor.setPosition(0.0)  # set all motors to default position
     # move the robot back to the start of the track
     translation_field.setSFVec3f(initial_position)
     rotation_field.setSFRotation(initial_rotation)
     for _ in range(3): 
-        robot.step(TIME_STEP)  ##Step the simulation a few times to stabilize the reset
+        robot.step(TIME_STEP)  # Step the simulation a few times to stabilize the reset
+    #robot.resetPhysics()
+    robot.simulationResetPhysics()
 
-
+###########################################################################
 # Evaluate fitness of an individual
+###########################################################################
 def evaluate(individual):
     reset_robot() # Reset robot to the initial state before evaluating each individual
     start_time = robot.getTime()
     max_distance, height_sum, height_samples = 0.0, 0.0, 0
     initial_pos = gps.getValues()
-    f = 1.0  # Gait frequency (1 Hz?)
+    f = 0.5  # Gait frequency (1 Hz?)
     
     while robot.getTime() - start_time < 20.0:  ##Run the simulation for 20 seconds
         time = robot.getTime()
-        for i, motor in enumerate(motors):  ##iterate over all motors
+        for i, motor in enumerate(motors):  # iterate over all motors
             # calculate the position of the motor
             position = (individual["amplitude"][i] * math.sin(2.0 * math.pi * f * time + individual["phase"][i]) + individual["offset"][i])
             motor_name = motor.getName()
-
             # Apply clamping based on joint-specific limits
             if motor_name in JOINT_LIMITS:
                 min_limit, max_limit = JOINT_LIMITS[motor_name]
                 position = clamp(position, min_limit, max_limit)
-            motor.setPosition(position) ##set the position of the motor to clamped value
-
-        robot.step(TIME_STEP)  ##Step the simulation
+            motor.setPosition(position) # set the position of the motor to clamped value
+        robot.step(TIME_STEP)
         current_pos = gps.getValues()
-
         distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
         max_distance = max(max_distance, distance)
-        
         height_sum += current_pos[1]
         height_samples += 1
-
     avg_height = height_sum / height_samples if height_samples > 0 else 0.0
     #print("average height:", avg_height)
     #print("max distance:", max_distance)
     individual["fitness"] = max_distance + avg_height * HEIGHT_WEIGHT
     return individual["fitness"]
 
-
+###########################################################################
 # Mutation
+###########################################################################
 def mutate(individual):
     for i in range(PARAMS):
         if random.random() < MUTATION_RATE:
@@ -134,8 +167,9 @@ def mutate(individual):
             individual["phase"][i] += random.uniform(-0.05, 0.05)
             individual["offset"][i] += random.uniform(-0.05, 0.05)
 
-
+###########################################################################
 # Crossover between two parents to create a child
+###########################################################################
 def crossover(parent1, parent2):
     child = create_individual()
     for i in range(PARAMS):
@@ -150,15 +184,17 @@ def crossover(parent1, parent2):
     mutate(child)
     return child
 
-
+###########################################################################
 # Roulette wheel selection based on fitness
+###########################################################################
 def select_parent(population):
     total_fitness = sum(ind["fitness"] for ind in population)
     selection_probs = [ind["fitness"] / total_fitness for ind in population] if total_fitness > 0 else None
     return random.choices(population, weights=selection_probs, k=1)[0] if selection_probs else random.choice(population)
 
-
+###########################################################################
 # Evolutionary process to create a new generation
+###########################################################################
 def evolve_population(population):
     population.sort(key=lambda ind: ind["fitness"], reverse=True)
     new_population = population[:POPULATION_SIZE // 2]
@@ -168,44 +204,30 @@ def evolve_population(population):
         new_population.append(child)
     return new_population
 
-
+###########################################################################
 # Main Evolution Loop
+###########################################################################
 def main():
     print("Starting Evolutionary Process...")
-    population = [create_individual() for _ in range(POPULATION_SIZE)]
+    #population = [create_individual() for _ in range(POPULATION_SIZE)]
+    population = [create_binary_individual() for _ in range(POPULATION_SIZE)]
+
     print("Initial Population Created")
     print("population size: ", len(population))
 
     for gen in range(NUM_GENERATIONS):
         print(f"############## Generation {gen} ##############")
         for i, individual in enumerate(population):
+            ind = convert_binary_to_float(individual)
             print("  Individual", i)
-            individual["fitness"] = evaluate(individual)
+            #individual["fitness"] = evaluate(individual)
+            individual["fitness"] = evaluate(ind)            
             reset_robot()
             print(f"    Fitness: {individual['fitness']:.3f}")
         population = evolve_population(population)
 
-
-def test_population():
-    pop_size = 5
-    population = [create_individual() for _ in range(pop_size)]
-    for individual in population:
-        print("----------------------------------------------------")
-        print("Individual:", individual)   
-        for i, motor in enumerate(motors):
-            print(f"Motor {i}: {motor.getName()} \n Amplitude: {individual['amplitude'][i]:.3f}, \n Phase: {individual['phase'][i]:.3f}, \n Offset: {individual['offset'][i]:.3f}")
-        print("----------------------------------------------------")
-
-
-def run_individual(individual):
-    print("Running Individual...")
-    print("Individual:", individual)
-    evaluate(individual)
-    print("Fitness:", individual["fitness"])
-
-
 if __name__ == "__main__":
-    
-    #main()
+    main()
+    #test_population()
 
-    test_population()
+###########################################################################
