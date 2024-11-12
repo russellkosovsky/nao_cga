@@ -3,25 +3,31 @@ import math
 import random
 
 # Constants
-NUM_GENERATIONS = 5
-POPULATION_SIZE = 10
-MUTATION_RATE = 0.03
+NUM_GENERATIONS = 100
+POPULATION_SIZE = 50
+MUTATION_RATE = 0.0075
 PARAMS = 10  ##Number of controlled motors
+NUM_ACTIVATIONS = 3  ##Number of actions (gait cycles per individual)
 TIME_STEP = 20  ##Default time step
-HEIGHT_WEIGHT = 0.2  ##Weight for the height component in the fitness function
+HEIGHT_WEIGHT = 0.5  ##Weight for the height component in the fitness function
 
 # Joint limits for the Nao robot (for clamping)
 JOINT_LIMITS = {
+    #"RHipYawPitch": (-1.14529, 0.740718),
     "RHipRoll": (-0.738274, 0.449597),
     "RHipPitch": (-1.77378, 0.48398),
     "RKneePitch": (-0.0923279, 2.11255),
     "RAnklePitch": (-1.1863, 0.932006),
     "RAnkleRoll": (-0.768992, 0.397935),
+    #"RShoulderPitch": (-2.08567, 2.08567),
+
+    #"LHipYawPitch": (-1.14529, 0.740718),
     "LHipRoll": (-0.379435, 0.79046),
     "LHipPitch": (-1.77378, 0.48398),
     "LKneePitch": (-0.0923279, 2.11255),
     "LAnklePitch": (-1.18944, 0.922581),
-    "LAnkleRoll": (-0.39788, 0.769001)
+    "LAnkleRoll": (-0.39788, 0.769001),
+    #"LShoulderPitch": (-2.08567, 2.08567)
 }
 
 # Initialize Supervisor and Devices
@@ -30,14 +36,18 @@ gps = robot.getDevice("gps")  ##to get the position of the robot
 gps.enable(TIME_STEP)
 
 # Motor Initialization
+#motor_names = ["RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll", "RShoulderPitch",
+ #              "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll", "LShoulderPitch"]
 motor_names = ["RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll",
                "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll"]
 motors = [robot.getDevice(name) for name in motor_names]
 for motor in motors:
     motor.setPosition(0.0)  ##set all motors to default position
-    
-robot.getDevice("RShoulderPitch").setPosition(1.1)  ##move right arm down
-robot.getDevice("LShoulderPitch").setPosition(1.1)  ##move left arm down
+
+robot.getDevice("RShoulderPitch").setPosition(1.2)  ##move right arm down
+robot.getDevice("LShoulderPitch").setPosition(1.2)  ##move left arm down
+robot.getDevice("RShoulderRoll").setPosition(-.5)  ##move right arm down
+robot.getDevice("LShoulderRoll").setPosition(.5)  ##move left arm down
 
 # Get the initial position and rotation of the robot
 root = robot.getRoot()  ##get the root node of the robot
@@ -75,6 +85,15 @@ def create_binary_individual():
         "fitness": 0.0  ##fitness value of the individual
     }
 
+def create_cyclic_individual():
+    return {
+        "amplitude": [[random.uniform(0, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##amplitude of the sine wave
+        "phase": [[random.uniform(0, 2 * math.pi) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##phase of the sine wave
+        "offset": [[random.uniform(-0.5, 0.5) for _ in range(PARAMS) for _ in range(NUM_ACTIVATIONS)]],  ##offset of the sine wave
+        "repetitions": [random.randint(1, 50) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
+        "fitness": 0.0  ##fitness value of the individual
+    }
+
 def convert_binary_to_float(individual):
     for i in range(PARAMS):
         individual["amplitude"][i] = int(individual["amplitude"][i], 2) / 15.0
@@ -85,13 +104,11 @@ def convert_binary_to_float(individual):
 def test_population():
     pop_size = 5
     #population = [create_individual() for _ in range(pop_size)]
-    population = [create_binary_individual() for _ in range(pop_size)]
+    #population = [create_binary_individual() for _ in range(pop_size)]
+    population = [create_cyclic_individual() for _ in range(pop_size)]
     for individual in population:
         print("----------------------------------------------------")
         print("Individual binary:", individual)   
-        individual = convert_binary_to_float(individual)
-        print("Individual binary:", individual)   
-
         for i, motor in enumerate(motors):
             #apply clamping
             motor_name = motor.getName()
@@ -109,6 +126,14 @@ def test_population():
 ###########################################################################
 def clamp(value, min_value, max_value):
     return max(min(value, max_value), min_value)
+def proportional_clamp(value, min_value, max_value, min_output, max_output):
+    """Clamps a value proportionally within a given range and maps it to a new output range."""
+    #amp_min, amp_max = 0, 0.5
+    #phase_min, phase_max = 0, 2 * math.pi
+    #offset_min, offset_max = -0.5, 0.5
+    clamped_value = max(min_value, min(value, max_value))
+    proportion = (clamped_value - min_value) / (max_value - min_value) #proportion of  clamped value within  input range
+    return min_output + proportion * (max_output - min_output) #Map the proportion to the output range
 
 ###########################################################################
 # Reset the robot to the initial state
@@ -132,8 +157,9 @@ def evaluate(individual):
     start_time = robot.getTime()
     max_distance, height_sum, height_samples = 0.0, 0.0, 0
     initial_pos = gps.getValues()
-    f = 0.5  # Gait frequency (1 Hz?)
+    f = 0.75  # Gait frequency (1 Hz?)
     
+    count = 0
     while robot.getTime() - start_time < 20.0:  ##Run the simulation for 20 seconds
         time = robot.getTime()
         for i, motor in enumerate(motors):  # iterate over all motors
@@ -146,6 +172,8 @@ def evaluate(individual):
                 position = clamp(position, min_limit, max_limit)
             motor.setPosition(position) # set the position of the motor to clamped value
         robot.step(TIME_STEP)
+        count += 1
+        print("count: ", count)
         current_pos = gps.getValues()
         distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
         max_distance = max(max_distance, distance)
@@ -156,6 +184,51 @@ def evaluate(individual):
     #print("max distance:", max_distance)
     individual["fitness"] = max_distance + avg_height * HEIGHT_WEIGHT
     return individual["fitness"]
+
+def evaluate_cyclic(individual):
+    print("individual: ", individual)
+
+    reset_robot() # Reset robot to the initial state before evaluating each individual
+    start_time = robot.getTime()
+    max_distance, height_sum, height_samples = 0.0, 0.0, 0
+    initial_pos = gps.getValues()
+    f = 0.75  # Gait frequency (1 Hz?)
+    
+    count = 0
+    while robot.getTime() - start_time < 20.0:  ##Run the simulation for 20 seconds
+        time = robot.getTime()
+        current_activation = 0
+        while individual["repetitions"][current_activation] >= count:
+            #print("repititions: ", individual["repetitions"][current_activation])
+            for i, motor in enumerate(motors):  # iterate over all motors
+                # calculate the position of the motor
+                position = (individual["amplitude"][current_activation][i] * math.sin(2.0 * math.pi * f * time + individual["phase"][current_activation][i]) + individual["offset"][current_activation][i])
+                motor_name = motor.getName()
+                # Apply clamping based on joint-specific limits
+                if motor_name in JOINT_LIMITS:
+                    min_limit, max_limit = JOINT_LIMITS[motor_name]
+                    position = clamp(position, min_limit, max_limit)
+                motor.setPosition(position) # set the position of the motor to clamped value
+            robot.step(TIME_STEP)
+            count += 1
+            #print("count: ", count)
+        current_pos = gps.getValues()
+        distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
+        max_distance = max(max_distance, distance)
+        height_sum += current_pos[1]
+        height_samples += 1
+        count = 0
+        current_activation += 1
+        print("current_activation: ", current_activation)
+        print("repititions: ", individual["repetitions"][current_activation])
+        if current_activation > NUM_ACTIVATIONS:
+            current_activation = 0
+    avg_height = height_sum / height_samples if height_samples > 0 else 0.0
+    #print("average height:", avg_height)
+    #print("max distance:", max_distance)
+    individual["fitness"] = max_distance + avg_height * HEIGHT_WEIGHT
+    return individual["fitness"]
+
 
 ###########################################################################
 # Mutation
@@ -210,24 +283,34 @@ def evolve_population(population):
 def main():
     print("Starting Evolutionary Process...")
     #population = [create_individual() for _ in range(POPULATION_SIZE)]
-    population = [create_binary_individual() for _ in range(POPULATION_SIZE)]
+    #population = [create_binary_individual() for _ in range(POPULATION_SIZE)]
+    population = [create_cyclic_individual() for _ in range(POPULATION_SIZE)]
 
     print("Initial Population Created")
     print("population size: ", len(population))
 
+    best_individuals = []
     for gen in range(NUM_GENERATIONS):
-        print(f"############## Generation {gen} ##############")
+        print(f"############## Generation {gen+1} ##############")
         for i, individual in enumerate(population):
-            ind = convert_binary_to_float(individual)
-            print("  Individual", i)
+            #ind = convert_binary_to_float(individual)
+            print("  Individual", i+1)
             #individual["fitness"] = evaluate(individual)
-            individual["fitness"] = evaluate(ind)            
+            individual["fitness"] = evaluate_cyclic(individual)
             reset_robot()
             print(f"    Fitness: {individual['fitness']:.3f}")
+        best_individual = max(population, key=lambda ind: ind["fitness"])
+        print(f"Best Individual in Generation {gen}: {best_individual['fitness']:.3f}")
+        best_individuals.append(best_individual)
         population = evolve_population(population)
+    print("Evolutionary Process Completed")
+    print("Best Individuals:")
+    for i, best_individual in enumerate(best_individuals):
+        print(f"Generation {i}: {best_individual['fitness']:.3f}")
 
 if __name__ == "__main__":
     main()
     #test_population()
+    #get_joint_limits()
 
 ###########################################################################
