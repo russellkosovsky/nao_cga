@@ -6,14 +6,14 @@ import random
 
 ###########################################################################
 # Constants
-NUM_GENERATIONS = 20
-POPULATION_SIZE = 10
+NUM_GENERATIONS = 50
+POPULATION_SIZE = 20
 MUTATION_RATE = 0.075
-PARAMS = 10  ##Number of controlled motors
-NUM_ACTIVATIONS = 8  ##Number of actions (gait cycles per individual)
-TIME_STEP = 20  ##Default time step
-HEIGHT_WEIGHT = 0.3  ##Weight for the height component in the fitness function
-JOINT_LIMITS = { # Joint limits for the Nao robot (for clamping)
+PARAMS = 10          # Number of controlled motors
+NUM_ACTIVATIONS = 8  # Number of actions (gait cycles per individual)
+TIME_STEP = 20       # Default time step
+HEIGHT_WEIGHT = 0.3  # Weight for the height component in the fitness function
+JOINT_LIMITS = {     # Joint limits for the Nao robot (for clamping)
     #"RHipYawPitch": (-1.14529, 0.740718),
     "RHipRoll": (-0.738274, 0.449597),
     "RHipPitch": (-1.77378, 0.48398),
@@ -37,18 +37,17 @@ gps = robot.getDevice("gps")  ##to get the position of the robot
 gps.enable(TIME_STEP)
 
 # Motor Initialization
-#motor_names = ["RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll", "RShoulderPitch",
- #              "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll", "LShoulderPitch"]
+#motor_names = ["RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll", "RShoulderPitch", "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll", "LShoulderPitch"]
 motor_names = ["RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll",
                "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll"]
 
 motors = [robot.getDevice(name) for name in motor_names]
 for motor in motors:
-    motor.setPosition(0.0)  ##set all motors to default position
+    motor.setPosition(0.0)  # set all motors to default position
 
 # Get the initial position and rotation of the robot
-root = robot.getRoot()  ##get the root node of the robot
-children_field = root.getField("children")  ##get the children field of the root node
+root = robot.getRoot()  # get the root node of the robot
+children_field = root.getField("children")  # get the children field of the root node
 robot_node = next((children_field.getMFNode(i) for i in range(children_field.getCount())
                    if children_field.getMFNode(i).getTypeName() == "Nao"), None)
 translation_field = robot_node.getField("translation")
@@ -75,6 +74,16 @@ def reset_robot(): # Reset the robot to the initial state
     rotation_field.setSFRotation(initial_rotation)
     for _ in range(3): 
         robot.step(TIME_STEP)  # Step the simulation a few times to stabilize the reset
+
+def clamp(value, min_value, max_value): # Clamp a value within a specific range
+    return max(min(value, max_value), min_value)
+def proportional_clamp(value, min_value, max_value, min_output, max_output):
+    #amp_min, amp_max = 0, 0.5
+    #phase_min, phase_max = 0, 2 * math.pi
+    #offset_min, offset_max = -0.5, 0.5
+    clamped_value = max(min_value, min(value, max_value))
+    proportion = (clamped_value - min_value) / (max_value - min_value) #proportion of  clamped value within  input range
+    return min_output + proportion * (max_output - min_output) #Map the proportion to the output range
 
 def create_individual(): # Create an individual with random motor parameters
     return {
@@ -107,17 +116,6 @@ def test_population():
                 individual["offset"][i] = clamp(individual["offset"][i], min_limit, max_limit)
             print(f"Motor {i}: {motor.getName()} \n Amplitude: {individual['amplitude'][i]:.3f}, \n Phase: {individual['phase'][i]:.3f}, \n Offset: {individual['offset'][i]:.3f}")
         print("----------------------------------------------------")
-
-def clamp(value, min_value, max_value): # Clamp a value within a specific range
-    return max(min(value, max_value), min_value)
-def proportional_clamp(value, min_value, max_value, min_output, max_output):
-    """Clamps a value proportionally within a given range and maps it to a new output range."""
-    #amp_min, amp_max = 0, 0.5
-    #phase_min, phase_max = 0, 2 * math.pi
-    #offset_min, offset_max = -0.5, 0.5
-    clamped_value = max(min_value, min(value, max_value))
-    proportion = (clamped_value - min_value) / (max_value - min_value) #proportion of  clamped value within  input range
-    return min_output + proportion * (max_output - min_output) #Map the proportion to the output range
 
 def evaluate_OG(individual): # Evaluate fitness of an individual
     reset_robot() # Reset robot to the initial state before evaluating each individual
