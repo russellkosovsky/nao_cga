@@ -3,13 +3,13 @@ import math
 import random
 
 # Constants
-NUM_GENERATIONS = 100
-POPULATION_SIZE = 50
-MUTATION_RATE = 0.0075
+NUM_GENERATIONS = 20
+POPULATION_SIZE = 10
+MUTATION_RATE = 0.075
 PARAMS = 10  ##Number of controlled motors
 NUM_ACTIVATIONS = 3  ##Number of actions (gait cycles per individual)
 TIME_STEP = 20  ##Default time step
-HEIGHT_WEIGHT = 0.5  ##Weight for the height component in the fitness function
+HEIGHT_WEIGHT = 0.3  ##Weight for the height component in the fitness function
 
 # Joint limits for the Nao robot (for clamping)
 JOINT_LIMITS = {
@@ -43,24 +43,22 @@ motor_names = ["RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll
 motors = [robot.getDevice(name) for name in motor_names]
 for motor in motors:
     motor.setPosition(0.0)  ##set all motors to default position
-
-robot.getDevice("RShoulderPitch").setPosition(1.2)  ##move right arm down
-robot.getDevice("LShoulderPitch").setPosition(1.2)  ##move left arm down
-robot.getDevice("RShoulderRoll").setPosition(-.5)  ##move right arm down
-robot.getDevice("LShoulderRoll").setPosition(.5)  ##move left arm down
+#robot.getDevice("RShoulderPitch").setPosition(1.2)  ##move right arm down
+#robot.getDevice("LShoulderPitch").setPosition(1.2)  ##move left arm down
+#robot.getDevice("RShoulderRoll").setPosition(-.5)
+#robot.getDevice("LShoulderRoll").setPosition(.5)
 
 # Get the initial position and rotation of the robot
 root = robot.getRoot()  ##get the root node of the robot
 children_field = root.getField("children")  ##get the children field of the root node
 robot_node = next((children_field.getMFNode(i) for i in range(children_field.getCount())
                    if children_field.getMFNode(i).getTypeName() == "Nao"), None)
-translation_field = robot_node.getField("translation")  
+translation_field = robot_node.getField("translation")
 rotation_field = robot_node.getField("rotation")
-initial_position = translation_field.getSFVec3f()  ##
-initial_rotation = rotation_field.getSFRotation()   
+initial_position = translation_field.getSFVec3f()
+initial_rotation = rotation_field.getSFRotation()
 
-# used once to find the limits for each motor
-def get_joint_limits():
+def get_joint_limits(): # use to find the limits for each motor
     for name in motor_names:
         curr_motor = robot.getDevice(name)
         min_position = curr_motor.getMinPosition()
@@ -77,47 +75,28 @@ def create_individual():
         "fitness": 0.0  ##fitness value of the individual
     }
 
-def create_binary_individual():
-    return {
-        "amplitude": [format(random.randint(0, 15), '04b') for _ in range(PARAMS)],  ##amplitude of the sine wave
-        "phase": [format(random.randint(0, 15), '04b') for _ in range(PARAMS)],  ##phase of the sine wave
-        "offset": [format(random.randint(0, 15), '04b') for _ in range(PARAMS)],  ##offset of the sine wave
-        "fitness": 0.0  ##fitness value of the individual
-    }
-
 def create_cyclic_individual():
     return {
         "amplitude": [[random.uniform(0, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##amplitude of the sine wave
         "phase": [[random.uniform(0, 2 * math.pi) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##phase of the sine wave
-        "offset": [[random.uniform(-0.5, 0.5) for _ in range(PARAMS) for _ in range(NUM_ACTIVATIONS)]],  ##offset of the sine wave
-        "repetitions": [random.randint(1, 50) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
+        "offset": [[random.uniform(-0.5, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##offset of the sine wave
+        "repetitions": [random.randint(1, 60) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
         "fitness": 0.0  ##fitness value of the individual
     }
-
-def convert_binary_to_float(individual):
-    for i in range(PARAMS):
-        individual["amplitude"][i] = int(individual["amplitude"][i], 2) / 15.0
-        individual["phase"][i] = int(individual["phase"][i], 2) / 15.0
-        individual["offset"][i] = int(individual["offset"][i], 2) / 15.0
-    return individual
 
 def test_population():
     pop_size = 5
     #population = [create_individual() for _ in range(pop_size)]
-    #population = [create_binary_individual() for _ in range(pop_size)]
     population = [create_cyclic_individual() for _ in range(pop_size)]
     for individual in population:
-        print("----------------------------------------------------")
-        print("Individual binary:", individual)   
+        print("----------------------------------------------------") 
         for i, motor in enumerate(motors):
-            #apply clamping
             motor_name = motor.getName()
             if motor_name in JOINT_LIMITS:
                 min_limit, max_limit = JOINT_LIMITS[motor_name]
                 individual["amplitude"][i] = clamp(individual["amplitude"][i], min_limit, max_limit)
                 individual["phase"][i] = clamp(individual["phase"][i], min_limit, max_limit)
                 individual["offset"][i] = clamp(individual["offset"][i], min_limit, max_limit)
-
             print(f"Motor {i}: {motor.getName()} \n Amplitude: {individual['amplitude'][i]:.3f}, \n Phase: {individual['phase'][i]:.3f}, \n Offset: {individual['offset'][i]:.3f}")
         print("----------------------------------------------------")
 
@@ -126,6 +105,7 @@ def test_population():
 ###########################################################################
 def clamp(value, min_value, max_value):
     return max(min(value, max_value), min_value)
+
 def proportional_clamp(value, min_value, max_value, min_output, max_output):
     """Clamps a value proportionally within a given range and maps it to a new output range."""
     #amp_min, amp_max = 0, 0.5
@@ -137,8 +117,9 @@ def proportional_clamp(value, min_value, max_value, min_output, max_output):
 
 ###########################################################################
 # Reset the robot to the initial state
-###########################################################################
 def reset_robot():
+    #robot.simulationResetPhysics()
+    robot.simulationReset()
     for motor in motors:
         motor.setPosition(0.0)  # set all motors to default position
     # move the robot back to the start of the track
@@ -146,13 +127,10 @@ def reset_robot():
     rotation_field.setSFRotation(initial_rotation)
     for _ in range(3): 
         robot.step(TIME_STEP)  # Step the simulation a few times to stabilize the reset
-    #robot.resetPhysics()
-    robot.simulationResetPhysics()
 
 ###########################################################################
 # Evaluate fitness of an individual
-###########################################################################
-def evaluate(individual):
+def evaluate_OG(individual):
     reset_robot() # Reset robot to the initial state before evaluating each individual
     start_time = robot.getTime()
     max_distance, height_sum, height_samples = 0.0, 0.0, 0
@@ -185,65 +163,77 @@ def evaluate(individual):
     individual["fitness"] = max_distance + avg_height * HEIGHT_WEIGHT
     return individual["fitness"]
 
-def evaluate_cyclic(individual):
-    print("individual: ", individual)
-
+def evaluate(individual):
+    #print("individual: ", individual)
     reset_robot() # Reset robot to the initial state before evaluating each individual
+    robot.getDevice("RShoulderPitch").setPosition(1.2)  ##move right arm down
+    robot.getDevice("LShoulderPitch").setPosition(1.2)  ##move left arm down
     start_time = robot.getTime()
-    max_distance, height_sum, height_samples = 0.0, 0.0, 0
+    max_distance, total_distance, height_sum, height_samples = 0.0, 0.0, 0.0, 0
     initial_pos = gps.getValues()
     f = 0.75  # Gait frequency (1 Hz?)
-    
     count = 0
+    current_activation = 0
     while robot.getTime() - start_time < 20.0:  ##Run the simulation for 20 seconds
         time = robot.getTime()
-        current_activation = 0
-        while individual["repetitions"][current_activation] >= count:
+        for i, motor in enumerate(motors):  # iterate over all motors
+            # calculate the position of the motor
+            position = (individual["amplitude"][current_activation][i] * math.sin(2.0 * math.pi * f * time + individual["phase"][current_activation][i]) + individual["offset"][current_activation][i])
+            motor_name = motor.getName()
+            # Apply clamping based on joint-specific limits
+            if motor_name in JOINT_LIMITS:
+                min_limit, max_limit = JOINT_LIMITS[motor_name]
+                position = clamp(position, min_limit, max_limit)
+            motor.setPosition(position) # set the position of the motor to clamped value
+        robot.step(TIME_STEP)
+        count += 1
+        #print("count: ", count)
+        #print(individual["repetitions"][current_activation])
+        if count >= individual["repetitions"][current_activation]:
+            count = 0
+            current_activation += 1
+            if current_activation > (NUM_ACTIVATIONS - 1):
+                current_activation = 0
+            #print("current_activation: ", current_activation)
             #print("repititions: ", individual["repetitions"][current_activation])
-            for i, motor in enumerate(motors):  # iterate over all motors
-                # calculate the position of the motor
-                position = (individual["amplitude"][current_activation][i] * math.sin(2.0 * math.pi * f * time + individual["phase"][current_activation][i]) + individual["offset"][current_activation][i])
-                motor_name = motor.getName()
-                # Apply clamping based on joint-specific limits
-                if motor_name in JOINT_LIMITS:
-                    min_limit, max_limit = JOINT_LIMITS[motor_name]
-                    position = clamp(position, min_limit, max_limit)
-                motor.setPosition(position) # set the position of the motor to clamped value
-            robot.step(TIME_STEP)
-            count += 1
-            #print("count: ", count)
         current_pos = gps.getValues()
-        distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
-        max_distance = max(max_distance, distance)
+        #distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
+        forward_distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2)
+        total_distance += forward_distance
+        #max_distance = max(max_distance, distance)
+        max_distance = max(max_distance, forward_distance)
         height_sum += current_pos[1]
         height_samples += 1
-        count = 0
-        current_activation += 1
-        print("current_activation: ", current_activation)
-        print("repititions: ", individual["repetitions"][current_activation])
-        if current_activation > NUM_ACTIVATIONS:
-            current_activation = 0
     avg_height = height_sum / height_samples if height_samples > 0 else 0.0
     #print("average height:", avg_height)
     #print("max distance:", max_distance)
-    individual["fitness"] = max_distance + avg_height * HEIGHT_WEIGHT
+    individual["fitness"] = max_distance + (avg_height * HEIGHT_WEIGHT)
+    #individual["fitness"] = total_distance
     return individual["fitness"]
 
 
 ###########################################################################
 # Mutation
-###########################################################################
-def mutate(individual):
+def mutate_OG(individual):
     for i in range(PARAMS):
         if random.random() < MUTATION_RATE:
             individual["amplitude"][i] += random.uniform(-0.05, 0.05)
             individual["phase"][i] += random.uniform(-0.05, 0.05)
             individual["offset"][i] += random.uniform(-0.05, 0.05)
 
+def mutate(individual):
+    for i in range(NUM_ACTIVATIONS):
+        for j in range(PARAMS):
+            if random.random() < MUTATION_RATE:
+                individual["amplitude"][i][j] += random.uniform(-0.05, 0.05)
+                individual["phase"][i][j] += random.uniform(-0.05, 0.05)
+                individual["offset"][i][j] += random.uniform(-0.05, 0.05)
+        if random.random() < MUTATION_RATE:
+            individual["repetitions"][i] += random.randint(-5, 5)
+
 ###########################################################################
 # Crossover between two parents to create a child
-###########################################################################
-def crossover(parent1, parent2):
+def crossover_OG(parent1, parent2):
     child = create_individual()
     for i in range(PARAMS):
         if random.choice([True, False]):
@@ -257,9 +247,24 @@ def crossover(parent1, parent2):
     mutate(child)
     return child
 
+def crossover(parent1, parent2):
+    child = create_cyclic_individual()
+    for i in range(NUM_ACTIVATIONS):
+        if random.choice([True, False]):
+            child["amplitude"][i] = parent1["amplitude"][i]
+            child["phase"][i] = parent1["phase"][i]
+            child["offset"][i] = parent1["offset"][i]
+            child["repetitions"][i] = parent1["repetitions"][i]
+        else:
+            child["amplitude"][i] = parent2["amplitude"][i]
+            child["phase"][i] = parent2["phase"][i]
+            child["offset"][i] = parent2["offset"][i]
+            child["repetitions"][i] = parent2["repetitions"][i]
+    mutate(child)
+    return child
+
 ###########################################################################
 # Roulette wheel selection based on fitness
-###########################################################################
 def select_parent(population):
     total_fitness = sum(ind["fitness"] for ind in population)
     selection_probs = [ind["fitness"] / total_fitness for ind in population] if total_fitness > 0 else None
@@ -267,7 +272,6 @@ def select_parent(population):
 
 ###########################################################################
 # Evolutionary process to create a new generation
-###########################################################################
 def evolve_population(population):
     population.sort(key=lambda ind: ind["fitness"], reverse=True)
     new_population = population[:POPULATION_SIZE // 2]
@@ -278,32 +282,24 @@ def evolve_population(population):
     return new_population
 
 ###########################################################################
-# Main Evolution Loop
-###########################################################################
+# Main Loop
 def main():
-    print("Starting Evolutionary Process...")
     #population = [create_individual() for _ in range(POPULATION_SIZE)]
-    #population = [create_binary_individual() for _ in range(POPULATION_SIZE)]
     population = [create_cyclic_individual() for _ in range(POPULATION_SIZE)]
-
-    print("Initial Population Created")
-    print("population size: ", len(population))
 
     best_individuals = []
     for gen in range(NUM_GENERATIONS):
         print(f"############## Generation {gen+1} ##############")
         for i, individual in enumerate(population):
-            #ind = convert_binary_to_float(individual)
-            print("  Individual", i+1)
-            #individual["fitness"] = evaluate(individual)
-            individual["fitness"] = evaluate_cyclic(individual)
+            individual["fitness"] = evaluate(individual)
             reset_robot()
-            print(f"    Fitness: {individual['fitness']:.3f}")
+            print("  Individual", i+1, "->", f"Fitness: {individual['fitness']:.3f}")
+        
         best_individual = max(population, key=lambda ind: ind["fitness"])
-        print(f"Best Individual in Generation {gen}: {best_individual['fitness']:.3f}")
         best_individuals.append(best_individual)
+        print(f"Best Individual in Generation {gen}: {best_individual['fitness']:.3f}")
         population = evolve_population(population)
-    print("Evolutionary Process Completed")
+
     print("Best Individuals:")
     for i, best_individual in enumerate(best_individuals):
         print(f"Generation {i}: {best_individual['fitness']:.3f}")
@@ -312,5 +308,3 @@ if __name__ == "__main__":
     main()
     #test_population()
     #get_joint_limits()
-
-###########################################################################
