@@ -180,22 +180,20 @@ def evaluate(individual): # Evaluate fitness of an individual
             current_activation += 1
             if current_activation > (NUM_ACTIVATIONS - 1):
                 current_activation = 0
-            print("current_activation: ", current_activation, "-> reps: ", individual["repetitions"][current_activation])
+            #print("current_activation: ", current_activation, "-> reps: ", individual["repetitions"][current_activation])
         current_pos = gps.getValues()
         #distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
-        forward_distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2)
-        total_distance += forward_distance
-        #max_distance = max(max_distance, distance)
-        max_distance = max(max_distance, forward_distance)
+        distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2) ##only x-axis (forward) distance
+        total_distance += distance
+        max_distance = max(max_distance, distance)
         height_sum += current_pos[1]
         height_samples += 1
     avg_height = height_sum / height_samples if height_samples > 0 else 0.0
-    #print("average height:", avg_height)
-    #print("max distance:", max_distance)
+    #print("average height: ", avg_height)
+    #print("max distance: ", max_distance)
+    #print("total distance: ", total_distance)
     individual["fitness"] = max_distance + (avg_height * HEIGHT_WEIGHT)
-    #individual["fitness"] = total_distance
     return individual["fitness"]
-
 
 def mutate_OG(individual):
     for i in range(PARAMS):
