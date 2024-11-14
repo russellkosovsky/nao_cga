@@ -65,6 +65,17 @@ def get_joint_limits(): # use to find the limits for each motor
         print(f"{name}: min_position={min_position}, max_position={max_position}")
     robot.step(TIME_STEP)  # Run a single simulation step to initialize devices
 
+def reset_robot(): # Reset the robot to the initial state
+    #robot.simulationResetPhysics()
+    robot.simulationReset()
+    for motor in motors:
+        motor.setPosition(0.0)  # set all motors to default position
+    # move the robot back to the start of the track
+    translation_field.setSFVec3f(initial_position)
+    rotation_field.setSFRotation(initial_rotation)
+    for _ in range(3): 
+        robot.step(TIME_STEP)  # Step the simulation a few times to stabilize the reset
+
 def create_individual(): # Create an individual with random motor parameters
     return {
         "amplitude": [random.uniform(0, 0.5) for _ in range(PARAMS)],  ##amplitude of the sine wave
@@ -108,17 +119,6 @@ def proportional_clamp(value, min_value, max_value, min_output, max_output):
     proportion = (clamped_value - min_value) / (max_value - min_value) #proportion of  clamped value within  input range
     return min_output + proportion * (max_output - min_output) #Map the proportion to the output range
 
-def reset_robot(): # Reset the robot to the initial state
-    #robot.simulationResetPhysics()
-    robot.simulationReset()
-    for motor in motors:
-        motor.setPosition(0.0)  # set all motors to default position
-    # move the robot back to the start of the track
-    translation_field.setSFVec3f(initial_position)
-    rotation_field.setSFRotation(initial_rotation)
-    for _ in range(3): 
-        robot.step(TIME_STEP)  # Step the simulation a few times to stabilize the reset
-
 def evaluate_OG(individual): # Evaluate fitness of an individual
     reset_robot() # Reset robot to the initial state before evaluating each individual
     start_time = robot.getTime()
@@ -154,14 +154,14 @@ def evaluate_OG(individual): # Evaluate fitness of an individual
 def evaluate(individual): # Evaluate fitness of an individual
     #print("individual: ", individual)
     reset_robot() # Reset robot to the initial state before evaluating each individual
-    robot.getDevice("RShoulderPitch").setPosition(1.2)  ##move right arm down
-    robot.getDevice("LShoulderPitch").setPosition(1.2)  ##move left arm down
+    robot.getDevice("RShoulderPitch").setPosition(1.2)  # move right arm down
+    robot.getDevice("LShoulderPitch").setPosition(1.2)  # move left arm down
     start_time = robot.getTime()
-    max_distance, total_distance, height_sum, height_samples = 0.0, 0.0, 0.0, 0
     initial_pos = gps.getValues()
+    max_distance, total_distance, height_sum, height_samples = 0.0, 0.0, 0.0, 0
     f = 0.75  # Gait frequency (1 Hz?)
-    count = 0
-    current_activation = 0
+
+    count, current_activation = 0, 0
     while robot.getTime() - start_time < 20.0:  ##Run the simulation for 20 seconds
         time = robot.getTime()
         for i, motor in enumerate(motors):  # iterate over all motors
@@ -175,24 +175,29 @@ def evaluate(individual): # Evaluate fitness of an individual
             motor.setPosition(position) # set the position of the motor to clamped value
         robot.step(TIME_STEP)
         count += 1
+        
+        current_pos = gps.getValues()
+        #distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
+        distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
+        total_distance += distance
+        max_distance = max(max_distance, distance)
+        height_sum += current_pos[1]
+        height_samples += 1
+
         if count >= individual["repetitions"][current_activation]:
             count = 0
             current_activation += 1
             if current_activation > (NUM_ACTIVATIONS - 1):
                 current_activation = 0
             #print("current_activation: ", current_activation, "-> reps: ", individual["repetitions"][current_activation])
-        current_pos = gps.getValues()
-        #distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
-        distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2) ##only x-axis (forward) distance
-        total_distance += distance
-        max_distance = max(max_distance, distance)
-        height_sum += current_pos[1]
-        height_samples += 1
+
     avg_height = height_sum / height_samples if height_samples > 0 else 0.0
+    fitness = max_distance + (avg_height * HEIGHT_WEIGHT)
     #print("average height: ", avg_height)
     #print("max distance: ", max_distance)
     #print("total distance: ", total_distance)
-    individual["fitness"] = max_distance + (avg_height * HEIGHT_WEIGHT)
+    #print("fitness: ", fitness)
+    individual["fitness"] = fitness
     return individual["fitness"]
 
 def mutate_OG(individual):
