@@ -1,18 +1,19 @@
+###########################################################################
 from controller import Robot, GPS, Supervisor
 import math
 import random
+###########################################################################
 
+###########################################################################
 # Constants
 NUM_GENERATIONS = 20
 POPULATION_SIZE = 10
 MUTATION_RATE = 0.075
 PARAMS = 10  ##Number of controlled motors
-NUM_ACTIVATIONS = 3  ##Number of actions (gait cycles per individual)
+NUM_ACTIVATIONS = 8  ##Number of actions (gait cycles per individual)
 TIME_STEP = 20  ##Default time step
 HEIGHT_WEIGHT = 0.3  ##Weight for the height component in the fitness function
-
-# Joint limits for the Nao robot (for clamping)
-JOINT_LIMITS = {
+JOINT_LIMITS = { # Joint limits for the Nao robot (for clamping)
     #"RHipYawPitch": (-1.14529, 0.740718),
     "RHipRoll": (-0.738274, 0.449597),
     "RHipPitch": (-1.77378, 0.48398),
@@ -40,13 +41,10 @@ gps.enable(TIME_STEP)
  #              "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll", "LShoulderPitch"]
 motor_names = ["RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll",
                "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll"]
+
 motors = [robot.getDevice(name) for name in motor_names]
 for motor in motors:
     motor.setPosition(0.0)  ##set all motors to default position
-#robot.getDevice("RShoulderPitch").setPosition(1.2)  ##move right arm down
-#robot.getDevice("LShoulderPitch").setPosition(1.2)  ##move left arm down
-#robot.getDevice("RShoulderRoll").setPosition(-.5)
-#robot.getDevice("LShoulderRoll").setPosition(.5)
 
 # Get the initial position and rotation of the robot
 root = robot.getRoot()  ##get the root node of the robot
@@ -57,6 +55,7 @@ translation_field = robot_node.getField("translation")
 rotation_field = robot_node.getField("rotation")
 initial_position = translation_field.getSFVec3f()
 initial_rotation = rotation_field.getSFRotation()
+###########################################################################
 
 def get_joint_limits(): # use to find the limits for each motor
     for name in motor_names:
@@ -66,15 +65,13 @@ def get_joint_limits(): # use to find the limits for each motor
         print(f"{name}: min_position={min_position}, max_position={max_position}")
     robot.step(TIME_STEP)  # Run a single simulation step to initialize devices
 
-# Create an individual with random motor parameters
-def create_individual():
+def create_individual(): # Create an individual with random motor parameters
     return {
         "amplitude": [random.uniform(0, 0.5) for _ in range(PARAMS)],  ##amplitude of the sine wave
         "phase": [random.uniform(0, 2 * math.pi) for _ in range(PARAMS)],  ##phase of the sine wave
         "offset": [random.uniform(-0.5, 0.5) for _ in range(PARAMS)],  ##offset of the sine wave
         "fitness": 0.0  ##fitness value of the individual
     }
-
 def create_cyclic_individual():
     return {
         "amplitude": [[random.uniform(0, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##amplitude of the sine wave
@@ -100,12 +97,8 @@ def test_population():
             print(f"Motor {i}: {motor.getName()} \n Amplitude: {individual['amplitude'][i]:.3f}, \n Phase: {individual['phase'][i]:.3f}, \n Offset: {individual['offset'][i]:.3f}")
         print("----------------------------------------------------")
 
-###########################################################################
-# Clamp a value within a specific range
-###########################################################################
-def clamp(value, min_value, max_value):
+def clamp(value, min_value, max_value): # Clamp a value within a specific range
     return max(min(value, max_value), min_value)
-
 def proportional_clamp(value, min_value, max_value, min_output, max_output):
     """Clamps a value proportionally within a given range and maps it to a new output range."""
     #amp_min, amp_max = 0, 0.5
@@ -115,9 +108,7 @@ def proportional_clamp(value, min_value, max_value, min_output, max_output):
     proportion = (clamped_value - min_value) / (max_value - min_value) #proportion of  clamped value within  input range
     return min_output + proportion * (max_output - min_output) #Map the proportion to the output range
 
-###########################################################################
-# Reset the robot to the initial state
-def reset_robot():
+def reset_robot(): # Reset the robot to the initial state
     #robot.simulationResetPhysics()
     robot.simulationReset()
     for motor in motors:
@@ -128,9 +119,7 @@ def reset_robot():
     for _ in range(3): 
         robot.step(TIME_STEP)  # Step the simulation a few times to stabilize the reset
 
-###########################################################################
-# Evaluate fitness of an individual
-def evaluate_OG(individual):
+def evaluate_OG(individual): # Evaluate fitness of an individual
     reset_robot() # Reset robot to the initial state before evaluating each individual
     start_time = robot.getTime()
     max_distance, height_sum, height_samples = 0.0, 0.0, 0
@@ -162,8 +151,7 @@ def evaluate_OG(individual):
     #print("max distance:", max_distance)
     individual["fitness"] = max_distance + avg_height * HEIGHT_WEIGHT
     return individual["fitness"]
-
-def evaluate(individual):
+def evaluate(individual): # Evaluate fitness of an individual
     #print("individual: ", individual)
     reset_robot() # Reset robot to the initial state before evaluating each individual
     robot.getDevice("RShoulderPitch").setPosition(1.2)  ##move right arm down
@@ -187,15 +175,12 @@ def evaluate(individual):
             motor.setPosition(position) # set the position of the motor to clamped value
         robot.step(TIME_STEP)
         count += 1
-        #print("count: ", count)
-        #print(individual["repetitions"][current_activation])
         if count >= individual["repetitions"][current_activation]:
             count = 0
             current_activation += 1
             if current_activation > (NUM_ACTIVATIONS - 1):
                 current_activation = 0
-            #print("current_activation: ", current_activation)
-            #print("repititions: ", individual["repetitions"][current_activation])
+            print("current_activation: ", current_activation, "-> reps: ", individual["repetitions"][current_activation])
         current_pos = gps.getValues()
         #distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
         forward_distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2)
@@ -212,15 +197,12 @@ def evaluate(individual):
     return individual["fitness"]
 
 
-###########################################################################
-# Mutation
 def mutate_OG(individual):
     for i in range(PARAMS):
         if random.random() < MUTATION_RATE:
             individual["amplitude"][i] += random.uniform(-0.05, 0.05)
             individual["phase"][i] += random.uniform(-0.05, 0.05)
             individual["offset"][i] += random.uniform(-0.05, 0.05)
-
 def mutate(individual):
     for i in range(NUM_ACTIVATIONS):
         for j in range(PARAMS):
@@ -231,8 +213,6 @@ def mutate(individual):
         if random.random() < MUTATION_RATE:
             individual["repetitions"][i] += random.randint(-5, 5)
 
-###########################################################################
-# Crossover between two parents to create a child
 def crossover_OG(parent1, parent2):
     child = create_individual()
     for i in range(PARAMS):
@@ -246,7 +226,6 @@ def crossover_OG(parent1, parent2):
             child["offset"][i] = parent2["offset"][i]
     mutate(child)
     return child
-
 def crossover(parent1, parent2):
     child = create_cyclic_individual()
     for i in range(NUM_ACTIVATIONS):
@@ -263,16 +242,12 @@ def crossover(parent1, parent2):
     mutate(child)
     return child
 
-###########################################################################
-# Roulette wheel selection based on fitness
 def select_parent(population):
     total_fitness = sum(ind["fitness"] for ind in population)
     selection_probs = [ind["fitness"] / total_fitness for ind in population] if total_fitness > 0 else None
     return random.choices(population, weights=selection_probs, k=1)[0] if selection_probs else random.choice(population)
 
-###########################################################################
-# Evolutionary process to create a new generation
-def evolve_population(population):
+def evolve_population(population): # Evolutionary process to create a new generation
     population.sort(key=lambda ind: ind["fitness"], reverse=True)
     new_population = population[:POPULATION_SIZE // 2]
     while len(new_population) < POPULATION_SIZE:
@@ -281,12 +256,9 @@ def evolve_population(population):
         new_population.append(child)
     return new_population
 
-###########################################################################
-# Main Loop
-def main():
+def main(): # Main Loop
     #population = [create_individual() for _ in range(POPULATION_SIZE)]
     population = [create_cyclic_individual() for _ in range(POPULATION_SIZE)]
-
     best_individuals = []
     for gen in range(NUM_GENERATIONS):
         print(f"############## Generation {gen+1} ##############")
@@ -294,12 +266,10 @@ def main():
             individual["fitness"] = evaluate(individual)
             reset_robot()
             print("  Individual", i+1, "->", f"Fitness: {individual['fitness']:.3f}")
-        
         best_individual = max(population, key=lambda ind: ind["fitness"])
         best_individuals.append(best_individual)
         print(f"Best Individual in Generation {gen}: {best_individual['fitness']:.3f}")
         population = evolve_population(population)
-
     print("Best Individuals:")
     for i, best_individual in enumerate(best_individuals):
         print(f"Generation {i}: {best_individual['fitness']:.3f}")
