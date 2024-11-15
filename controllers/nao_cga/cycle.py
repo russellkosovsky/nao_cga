@@ -1,12 +1,5 @@
-###########################################################################
-from controller import Robot, GPS, Supervisor
-import math
-import random
-###########################################################################
-
-repitition = 40 #miliseconds
-#duration,index,LHipRoll,LHipPitch,LKneePitch,LAnklePitch,LAnkleRoll,RHipRoll,RHipPitch,RKneePitch,RAnklePitch,RAnkleRoll,
-cycle =[[-0.034,-0.518,1.047,-0.529,0.034,-0.034,-0.518,1.047,-0.529,0.034],
+#LHipRoll, LHipPitch, LKneePitch, LAnklePitch, LAnkleRoll, RHipRoll, RHipPitch, RKneePitch, RAnklePitch, RAnkleRoll,
+CYCLE =[[-0.034,-0.518,1.047,-0.529,0.034,-0.034,-0.518,1.047,-0.529,0.034],
         [-0.044,-0.516,1.045,-0.53,0.044,-0.044,-0.516,1.045,-0.53,0.044],
         [-0.063,-0.51,1.041,-0.531,0.063,-0.063,-0.51,1.041,-0.531,0.063],
         [-0.08,-0.505,1.036,-0.531,0.08,-0.08,-0.505,1.036,-0.531,0.08],

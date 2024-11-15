@@ -2,6 +2,8 @@
 from controller import Robot, GPS, Supervisor
 import math
 import random
+import time
+from cycle import CYCLE
 ###########################################################################
 
 ###########################################################################
@@ -9,26 +11,26 @@ import random
 NUM_GENERATIONS = 50
 POPULATION_SIZE = 20
 MUTATION_RATE = 0.075
-PARAMS = 8           # Number of controlled motors
+PARAMS = 10          # Number of controlled motors
 NUM_ACTIVATIONS = 30 # Number of actions (gait cycles per individual)
 TIME_STEP = 20       # Default time step
 HEIGHT_WEIGHT = 0.3  # Weight for the height component in the fitness function
 JOINT_LIMITS = {     # Joint limits for the Nao robot (for clamping)
-    #"RShoulderPitch": (-2.08567, 2.08567),
-    #"RHipYawPitch": (-1.14529, 0.740718),
-    #"RHipRoll": (-0.738274, 0.449597),
-    "RHipPitch": (-1.77378, 0.48398),
-    "RKneePitch": (-0.0923279, 2.11255),
-    "RAnklePitch": (-1.1863, 0.932006),
-    "RAnkleRoll": (-0.768992, 0.397935),
-
-    #"LShoulderPitch": (-2.08567, 2.08567)
+    #"LShoulderPitch": (-2.08567, 2.08567),
     #"LHipYawPitch": (-1.14529, 0.740718),
-    #"LHipRoll": (-0.379435, 0.79046),
+    "LHipRoll": (-0.379435, 0.79046),
     "LHipPitch": (-1.77378, 0.48398),
     "LKneePitch": (-0.0923279, 2.11255),
     "LAnklePitch": (-1.18944, 0.922581),
     "LAnkleRoll": (-0.39788, 0.769001),
+
+    #"RShoulderPitch": (-2.08567, 2.08567),
+    #"RHipYawPitch": (-1.14529, 0.740718),
+    "RHipRoll": (-0.738274, 0.449597),
+    "RHipPitch": (-1.77378, 0.48398),
+    "RKneePitch": (-0.0923279, 2.11255),
+    "RAnklePitch": (-1.1863, 0.932006),
+    "RAnkleRoll": (-0.768992, 0.397935)
 }
 ###########################################################################
 
@@ -42,11 +44,8 @@ gps.enable(TIME_STEP)
 ###########################################################################
 # Motor Initialization
 #motor_names = ["RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll", "RShoulderPitch", "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll", "LShoulderPitch"]
-motor_names_OG = ["RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll",
-                  "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll"]
-
-motor_names = ["RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll",
-               "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll"]
+motor_names = ["LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll", 
+               "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
 
 motors = [robot.getDevice(name) for name in motor_names]
 for motor in motors:
@@ -293,8 +292,38 @@ def main(): # Main Loop
     for i, best_individual in enumerate(best_individuals):
         print(f"Generation {i}: {best_individual['fitness']:.3f}")
 
+def hardcoded():
+    start_time = time.time()
+    end_time = start_time + 20.0  # Run the simulation for 20 seconds
+    while time.time() < end_time:
+        cycle_time = time.time()
+        cycle_end_time = cycle_time + 0.07 # 40 milliseconds per cycle
+        while time.time() < cycle_end_time:
+            for cycle in CYCLE:
+                for j, motor in enumerate(motors):
+                    motor.setPosition(cycle[j])
+                robot.step(TIME_STEP)
+            #time.sleep(0.1)
+
+def position_ind():
+    individual = []
+    for i in range(1, 35):
+        cycle = []
+        for j in range(len(motors)):
+            # random float between -1 and 1
+            position = random.uniform(-1, 1)
+            position = round(position, 2)
+            cycle.append(position)
+        individual.append(cycle)
+
+    print("individual: ", individual)
+            
+
+
 ##########################################################################################
 if __name__ == "__main__":
-    main()
+    #main()
     #test_population()
     #get_joint_limits()
+    #hardcoded()
+    position_ind()
