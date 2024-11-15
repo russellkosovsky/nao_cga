@@ -164,8 +164,8 @@ def evaluate_OG(individual): # Evaluate fitness of an individual
 def evaluate(individual): # Evaluate fitness of an individual
     #print("individual: ", individual)
     reset_robot() # Reset robot to the initial state before evaluating each individual
-    robot.getDevice("RShoulderPitch").setPosition(1.2)  # move right arm down
-    robot.getDevice("LShoulderPitch").setPosition(1.2)  # move left arm down
+    robot.getDevice("RShoulderPitch").setPosition(1)  # move right arm down
+    robot.getDevice("LShoulderPitch").setPosition(1)  # move left arm down
     start_time = robot.getTime()
     initial_pos = gps.getValues()
     max_distance, total_distance, height_sum, height_samples = 0.0, 0.0, 0.0, 0
