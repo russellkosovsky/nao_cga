@@ -6,11 +6,11 @@ import random
 
 ###########################################################################
 # Constants
-NUM_GENERATIONS = 5
-POPULATION_SIZE = 10
+NUM_GENERATIONS = 50
+POPULATION_SIZE = 20
 MUTATION_RATE = 0.075
 PARAMS = 8           # Number of controlled motors
-NUM_ACTIVATIONS = 8  # Number of actions (gait cycles per individual)
+NUM_ACTIVATIONS = 30 # Number of actions (gait cycles per individual)
 TIME_STEP = 20       # Default time step
 HEIGHT_WEIGHT = 0.3  # Weight for the height component in the fitness function
 JOINT_LIMITS = {     # Joint limits for the Nao robot (for clamping)
