@@ -94,7 +94,7 @@ def proportional_clamp(value, min_value, max_value, min_output, max_output):
     proportion = (clamped_value - min_value) / (max_value - min_value) #proportion of  clamped value within  input range
     return min_output + proportion * (max_output - min_output) #Map the proportion to the output range
 
-def create_individual(): # Create an individual with random motor parameters
+def create_CPG_individual(): # Create an individual with random motor parameters
     return {
         "amplitude": [random.uniform(0, 0.5) for _ in range(PARAMS)],  ##amplitude of the sine wave
         "phase": [random.uniform(0, 2 * math.pi) for _ in range(PARAMS)],  ##phase of the sine wave
@@ -110,6 +110,20 @@ def create_cyclic_individual():
         "repetitions": [random.randint(1, 60) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
         "fitness": 0.0  ##fitness value of the individual
     }
+
+# Create an individual with random motor positions rather than sin wave
+def create_position_individual():
+    individual = []
+    for _ in range(1, 35):
+        cycle = []
+        for _ in range(len(motors)):
+            # random float between -1 and 1
+            position = random.uniform(-1, 1)
+            position = round(position, 2)
+            cycle.append(position)
+        individual.append(cycle)
+    #print("individual: ", individual)
+    return individual
 
 def test_population():
     pop_size = 5
@@ -209,6 +223,57 @@ def evaluate(individual): # Evaluate fitness of an individual
     individual["fitness"] = fitness
     return individual["fitness"]
 
+def evaluate_positional(individual): # Evaluate fitness of an individual
+    #print("individual: ", individual)
+    reset_robot() # Reset robot to the initial state before evaluating each individual
+    robot.getDevice("RShoulderPitch").setPosition(1)  # move right arm down
+    robot.getDevice("LShoulderPitch").setPosition(1)  # move left arm down
+    start_time = robot.getTime()
+    initial_pos = gps.getValues()
+    max_distance, total_distance, height_sum, height_samples = 0.0, 0.0, 0.0, 0
+    f = 0.75  # Gait frequency (Hz?)
+
+    count, current_activation = 0, 0
+    while robot.getTime() - start_time < 20.0:  # Run the simulation for 20 seconds
+        cycle_time = time.time()
+        cycle_end_time = cycle_time + 0.07 # 40 milliseconds per cycle
+        for i, motor in enumerate(motors):  # iterate over all motors
+            # calculate the position of the motor
+            position = (individual[current_activation][i])
+            motor_name = motor.getName()
+            # Apply clamping based on joint-specific limits
+            if motor_name in JOINT_LIMITS:
+                min_limit, max_limit = JOINT_LIMITS[motor_name]
+                position = clamp(position, min_limit, max_limit)
+            motor.setPosition(position) # set the position of the motor to clamped value
+        robot.step(TIME_STEP)
+        count += 1
+        
+        current_pos = gps.getValues()
+        #distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
+        distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
+        total_distance += distance
+        max_distance = max(max_distance, distance)
+        height_sum += current_pos[1]
+        height_samples += 1
+
+        #if count >= individual["repetitions"][current_activation]:
+        if cycle_time > cycle_end_time:
+            count = 0
+            current_activation += 1
+            if current_activation > (NUM_ACTIVATIONS - 1):
+                current_activation = 0
+            #print("current_activation: ", current_activation, "-> reps: ", individual["repetitions"][current_activation])
+
+    avg_height = height_sum / height_samples if height_samples > 0 else 0.0
+    fitness = max_distance + (avg_height * HEIGHT_WEIGHT)
+    #print("average height: ", avg_height)
+    #print("max distance: ", max_distance)
+    #print("total distance: ", total_distance)
+    #print("fitness: ", fitness)
+    individual["fitness"] = fitness
+    return individual["fitness"]
+
 def mutate_OG(individual):
     for i in range(PARAMS):
         if random.random() < MUTATION_RATE:
@@ -272,25 +337,33 @@ def evolve_population(population): # Evolutionary process to create a new genera
 
 ##########################################################################################
 def main(): # Main Loop
-    #population = [create_individual() for _ in range(POPULATION_SIZE)]
+    #population = [create_CPG_individual() for _ in range(POPULATION_SIZE)]
     population = [create_cyclic_individual() for _ in range(POPULATION_SIZE)]
+    #population = [create_position_individual() for _ in range(POPULATION_SIZE)]
+    
     best_individuals = []
     for gen in range(NUM_GENERATIONS):
         print(f"############## Generation {gen+1} ##############")
         for i, individual in enumerate(population):
             individual["fitness"] = evaluate(individual)
+            #fit = evaluate_positional(individual)
             reset_robot()
             print("  Individual", i+1, "->", f"Fitness: {individual['fitness']:.3f}")
+            #print("  Individual", i+1, "->", f"Fitness: {fit:.3f}")
         
         best_individual = max(population, key=lambda ind: ind["fitness"])
+        #best_individual = max(population, key=lambda ind: fit)
         best_individuals.append(best_individual)
         print(f"Best Individual in Generation {gen}: {best_individual['fitness']:.3f}")
+        #print(f"Best Individual in Generation {gen}: {fit:.3f}")
         population = evolve_population(population)
 
     print("############## Evolution Complete ##############")
     print("Best Individuals:")
     for i, best_individual in enumerate(best_individuals):
         print(f"Generation {i}: {best_individual['fitness']:.3f}")
+        #print(f"Generation {i}: {best_individual}")
+
 
 # hardcoded gait cycle
 def hardcoded():
@@ -305,24 +378,9 @@ def hardcoded():
                     motor.setPosition(cycle[j])
                 robot.step(TIME_STEP)
 
-# Create an individual with random motor positions rather than sin wave
-def position_ind():
-    individual = []
-    for i in range(1, 35):
-        cycle = []
-        for j in range(len(motors)):
-            # random float between -1 and 1
-            position = random.uniform(-1, 1)
-            position = round(position, 2)
-            cycle.append(position)
-        individual.append(cycle)
-    print("individual: ", individual)
-
-
 ##########################################################################################
 if __name__ == "__main__":
-    #main()
+    main()
     #test_population()
     #get_joint_limits()
     #hardcoded()
-    position_ind()
