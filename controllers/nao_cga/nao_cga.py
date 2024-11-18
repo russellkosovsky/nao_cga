@@ -292,6 +292,7 @@ def main(): # Main Loop
     for i, best_individual in enumerate(best_individuals):
         print(f"Generation {i}: {best_individual['fitness']:.3f}")
 
+# hardcoded gait cycle
 def hardcoded():
     start_time = time.time()
     end_time = start_time + 20.0  # Run the simulation for 20 seconds
@@ -303,8 +304,8 @@ def hardcoded():
                 for j, motor in enumerate(motors):
                     motor.setPosition(cycle[j])
                 robot.step(TIME_STEP)
-            #time.sleep(0.1)
 
+# Create an individual with random motor positions rather than sin wave
 def position_ind():
     individual = []
     for i in range(1, 35):
@@ -315,9 +316,7 @@ def position_ind():
             position = round(position, 2)
             cycle.append(position)
         individual.append(cycle)
-
     print("individual: ", individual)
-            
 
 
 ##########################################################################################
