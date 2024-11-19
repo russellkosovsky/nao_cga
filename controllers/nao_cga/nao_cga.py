@@ -96,10 +96,10 @@ def proportional_clamp(value, min_value, max_value, min_output, max_output):
 
 def create_CPG_individual(): # Create an individual with random motor parameters
     return {
-        "amplitude": [random.uniform(0, 0.5) for _ in range(PARAMS)],  ##amplitude of the sine wave
-        "phase": [random.uniform(0, 2 * math.pi) for _ in range(PARAMS)],  ##phase of the sine wave
-        "offset": [random.uniform(-0.5, 0.5) for _ in range(PARAMS)],  ##offset of the sine wave
-        "fitness": 0.0  ##fitness value of the individual
+        "amplitude": [random.uniform(0, 0.5) for _ in range(PARAMS)],  # amplitude of the sine wave
+        "phase": [random.uniform(0, 2 * math.pi) for _ in range(PARAMS)],  # phase of the sine wave
+        "offset": [random.uniform(-0.5, 0.5) for _ in range(PARAMS)],  # offset of the sine wave
+        "fitness": 0.0  # fitness value of the individual
     }
 
 def create_cyclic_individual():
