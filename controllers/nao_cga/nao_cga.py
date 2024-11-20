@@ -8,11 +8,11 @@ from cycle import CYCLE
 
 ###########################################################################
 # Constants
-NUM_GENERATIONS = 50
-POPULATION_SIZE = 20
+NUM_GENERATIONS = 200
+POPULATION_SIZE = 100
 MUTATION_RATE = 0.075
 PARAMS = 10          # Number of controlled motors
-NUM_ACTIVATIONS = 30 # Number of actions (gait cycles per individual)
+NUM_ACTIVATIONS = 10 # Number of actions (gait cycles per individual)
 TIME_STEP = 20       # Default time step
 HEIGHT_WEIGHT = 0.3  # Weight for the height component in the fitness function
 JOINT_LIMITS = {     # Joint limits for the Nao robot (for clamping)
@@ -126,9 +126,10 @@ def create_position_individual():
     return individual
 
 def test_population():
-    pop_size = 5
+    pop_size = 1
     #population = [create_individual() for _ in range(pop_size)]
-    population = [create_cyclic_individual() for _ in range(pop_size)]
+    #population = [create_cyclic_individual() for _ in range(pop_size)]
+    population = [create_CPG_individual() for _ in range(pop_size)]
     for individual in population:
         print("----------------------------------------------------") 
         for i, motor in enumerate(motors):
@@ -138,7 +139,9 @@ def test_population():
                 individual["amplitude"][i] = clamp(individual["amplitude"][i], min_limit, max_limit)
                 individual["phase"][i] = clamp(individual["phase"][i], min_limit, max_limit)
                 individual["offset"][i] = clamp(individual["offset"][i], min_limit, max_limit)
-            print(f"Motor {i}: {motor.getName()} \n Amplitude: {individual['amplitude'][i]:.3f}, \n Phase: {individual['phase'][i]:.3f}, \n Offset: {individual['offset'][i]:.3f}")
+            print()
+            print(f"\nMotor {i}: {motor.getName()} \n Amplitude: {individual['amplitude'][i]:.3f}, \n Phase: {individual['phase'][i]:.3f}, \n Offset: {individual['offset'][i]:.3f}\n")
+            print(" ")
         print("----------------------------------------------------")
 
 def evaluate_OG(individual): # Evaluate fitness of an individual
@@ -380,7 +383,7 @@ def hardcoded():
 
 ##########################################################################################
 if __name__ == "__main__":
-    main()
+    #main()
     #test_population()
     #get_joint_limits()
-    #hardcoded()
+    hardcoded()
