@@ -127,10 +127,11 @@ def create_position_individual():
 
 def test_population():
     pop_size = 5
-    #population = [create_individual() for _ in range(pop_size)]
-    population = [create_cyclic_individual() for _ in range(pop_size)]
+    population = [create_CPG_individual() for _ in range(pop_size)]
+    #population = [create_cyclic_individual() for _ in range(pop_size)]
     for individual in population:
         print("----------------------------------------------------") 
+        #print(individual)
         for i, motor in enumerate(motors):
             motor_name = motor.getName()
             if motor_name in JOINT_LIMITS:
@@ -368,9 +369,7 @@ def main(): # Main Loop
         print(f"Generation {i}: {best_individual['fitness']:.3f}")
         #print(f"Generation {i}: {best_individual}")
 
-
-# hardcoded gait cycle
-def hardcoded():
+def hardcoded(): # hardcoded gait cycle
     start_time = time.time()
     end_time = start_time + 20.0  # Run the simulation for 20 seconds
     while time.time() < end_time:
