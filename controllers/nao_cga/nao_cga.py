@@ -8,11 +8,11 @@ from cycle import CYCLE
 
 ###########################################################################
 # Constants
-NUM_GENERATIONS = 200
+NUM_GENERATIONS = 100
 POPULATION_SIZE = 100
 MUTATION_RATE = 0.075
 PARAMS = 10          # Number of controlled motors
-NUM_ACTIVATIONS = 10 # Number of actions (gait cycles per individual)
+NUM_ACTIVATIONS = 30 # Number of actions (gait cycles per individual)
 TIME_STEP = 20       # Default time step
 HEIGHT_WEIGHT = 0.3  # Weight for the height component in the fitness function
 JOINT_LIMITS = {     # Joint limits for the Nao robot (for clamping)
@@ -96,10 +96,10 @@ def proportional_clamp(value, min_value, max_value, min_output, max_output):
 
 def create_CPG_individual(): # Create an individual with random motor parameters
     return {
-        "amplitude": [random.uniform(0, 0.5) for _ in range(PARAMS)],  # amplitude of the sine wave
-        "phase": [random.uniform(0, 2 * math.pi) for _ in range(PARAMS)],  # phase of the sine wave
-        "offset": [random.uniform(-0.5, 0.5) for _ in range(PARAMS)],  # offset of the sine wave
-        "fitness": 0.0  # fitness value of the individual
+        "amplitude": [random.uniform(0, 0.5) for _ in range(PARAMS)],  ##amplitude of the sine wave
+        "phase": [random.uniform(0, 2 * math.pi) for _ in range(PARAMS)],  ##phase of the sine wave
+        "offset": [random.uniform(-0.5, 0.5) for _ in range(PARAMS)],  ##offset of the sine wave
+        "fitness": 0.0  ##fitness value of the individual
     }
 
 def create_cyclic_individual():
@@ -126,10 +126,9 @@ def create_position_individual():
     return individual
 
 def test_population():
-    pop_size = 1
+    pop_size = 5
     #population = [create_individual() for _ in range(pop_size)]
-    #population = [create_cyclic_individual() for _ in range(pop_size)]
-    population = [create_CPG_individual() for _ in range(pop_size)]
+    population = [create_cyclic_individual() for _ in range(pop_size)]
     for individual in population:
         print("----------------------------------------------------") 
         for i, motor in enumerate(motors):
@@ -139,9 +138,7 @@ def test_population():
                 individual["amplitude"][i] = clamp(individual["amplitude"][i], min_limit, max_limit)
                 individual["phase"][i] = clamp(individual["phase"][i], min_limit, max_limit)
                 individual["offset"][i] = clamp(individual["offset"][i], min_limit, max_limit)
-            print()
-            print(f"\nMotor {i}: {motor.getName()} \n Amplitude: {individual['amplitude'][i]:.3f}, \n Phase: {individual['phase'][i]:.3f}, \n Offset: {individual['offset'][i]:.3f}\n")
-            print(" ")
+            print(f"Motor {i}: {motor.getName()} \n Amplitude: {individual['amplitude'][i]:.3f}, \n Phase: {individual['phase'][i]:.3f}, \n Offset: {individual['offset'][i]:.3f}")
         print("----------------------------------------------------")
 
 def evaluate_OG(individual): # Evaluate fitness of an individual
@@ -191,14 +188,18 @@ def evaluate(individual): # Evaluate fitness of an individual
     while robot.getTime() - start_time < 20.0:  # Run the simulation for 20 seconds
         time = robot.getTime()
         for i, motor in enumerate(motors):  # iterate over all motors
-            # calculate the position of the motor
+            
+            # motor position: y(t) = A * sin(2 * pi * f * t + phi) + C
+                                   #(AMPLITUDE * (sin (2 * pi * frequency * time + PHASE) + OFFSET))
             position = (individual["amplitude"][current_activation][i] * math.sin(2.0 * math.pi * f * time + individual["phase"][current_activation][i]) + individual["offset"][current_activation][i])
+            
             motor_name = motor.getName()
-            # Apply clamping based on joint-specific limits
-            if motor_name in JOINT_LIMITS:
+            if motor_name in JOINT_LIMITS: # value clamping based on joint limits
                 min_limit, max_limit = JOINT_LIMITS[motor_name]
                 position = clamp(position, min_limit, max_limit)
+            
             motor.setPosition(position) # set the position of the motor to clamped value
+        
         robot.step(TIME_STEP)
         count += 1
         
