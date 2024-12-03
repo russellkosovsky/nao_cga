@@ -383,7 +383,7 @@ def hardcoded():
 
 ##########################################################################################
 if __name__ == "__main__":
-    #main()
+    main()
     #test_population()
     #get_joint_limits()
-    hardcoded()
+    #hardcoded()

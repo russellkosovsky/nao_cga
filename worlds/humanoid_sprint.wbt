@@ -113,7 +113,7 @@ DEF GRASS Solid {
 }
 DEF NAO Nao {
   translation -5.345 0.65 0.334
-  controller "sprinter"
+  controller "nao_cga"
   supervisor TRUE
   selfCollision TRUE
 }
