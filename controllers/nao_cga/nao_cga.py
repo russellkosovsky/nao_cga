@@ -5,55 +5,54 @@ import random
 import time
 from cycle import CYCLE
 ###########################################################################
-
+## Constants
 ###########################################################################
-# Constants
 NUM_GENERATIONS = 100
-POPULATION_SIZE = 100
+POPULATION_SIZE = 50
 MUTATION_RATE = 0.075
-PARAMS = 10          # Number of controlled motors
-NUM_ACTIVATIONS = 30 # Number of actions (gait cycles per individual)
-TIME_STEP = 20       # Default time step
-HEIGHT_WEIGHT = 0.3  # Weight for the height component in the fitness function
-JOINT_LIMITS = {     # Joint limits for the Nao robot (for clamping)
-    #"LShoulderPitch": (-2.08567, 2.08567),
-    #"LHipYawPitch": (-1.14529, 0.740718),
-    "LHipRoll": (-0.379435, 0.79046),
-    "LHipPitch": (-1.77378, 0.48398),
-    "LKneePitch": (-0.0923279, 2.11255),
-    "LAnklePitch": (-1.18944, 0.922581),
-    "LAnkleRoll": (-0.39788, 0.769001),
+PARAMS = 14           # number of controlled motors
+NUM_ACTIVATIONS = 20  # number of actions (gait cycles per individual)
+TIME_STEP = 20        # default time step
+HEIGHT_WEIGHT = 0.5   # weight for the height component of the fitness
+JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
+                "LShoulderPitch": (-2.08567, 2.08567),
+                "LHipYawPitch": (-1.14529, 0.740718),
+                "LHipRoll": (-0.379435, 0.79046),
+                "LHipPitch": (-1.77378, 0.48398),
+                "LKneePitch": (-0.0923279, 2.11255),
+                "LAnklePitch": (-1.18944, 0.922581),
+                "LAnkleRoll": (-0.39788, 0.769001),
+                #######################################
+                "RShoulderPitch": (-2.08567, 2.08567),
+                "RHipYawPitch": (-1.14529, 0.740718),
+                "RHipRoll": (-0.738274, 0.449597),
+                "RHipPitch": (-1.77378, 0.48398),
+                "RKneePitch": (-0.0923279, 2.11255),
+                "RAnklePitch": (-1.1863, 0.932006),
+                "RAnkleRoll": (-0.768992, 0.397935)
+               }
 
-    #"RShoulderPitch": (-2.08567, 2.08567),
-    #"RHipYawPitch": (-1.14529, 0.740718),
-    "RHipRoll": (-0.738274, 0.449597),
-    "RHipPitch": (-1.77378, 0.48398),
-    "RKneePitch": (-0.0923279, 2.11255),
-    "RAnklePitch": (-1.1863, 0.932006),
-    "RAnkleRoll": (-0.768992, 0.397935)
-}
 ###########################################################################
-
+## Initialize Supervisor and Devices
 ###########################################################################
-# Initialize Supervisor and Devices
 robot = Supervisor()  ##used to control the simulation
 gps = robot.getDevice("gps")  ##to get the position of the robot
 gps.enable(TIME_STEP)
-###########################################################################
 
 ###########################################################################
-# Motor Initialization
-#motor_names = ["RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll", "RShoulderPitch", "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll", "LShoulderPitch"]
-motor_names = ["LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll", 
-               "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
-
+## Motor Initialization
+###########################################################################
+motor_names = ["RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll", "RShoulderPitch", 
+               "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll", "LShoulderPitch"]
+#motor_names = ["LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll", 
+ #              "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
 motors = [robot.getDevice(name) for name in motor_names]
 for motor in motors:
     motor.setPosition(0.0)  # set all motors to default position
-###########################################################################
 
 ###########################################################################
-# Get the initial position and rotation of the robot
+## Get the initial position and rotation of the robot
+###########################################################################
 root = robot.getRoot()  # get the root node of the robot
 children_field = root.getField("children")  # get the children field of the root node
 robot_node = next((children_field.getMFNode(i) for i in range(children_field.getCount())
@@ -62,7 +61,6 @@ translation_field = robot_node.getField("translation")
 rotation_field = robot_node.getField("rotation")
 initial_position = translation_field.getSFVec3f()
 initial_rotation = rotation_field.getSFRotation()
-###########################################################################
 
 def get_joint_limits(): # use to find the limits for each motor
     for name in motor_names:
@@ -77,7 +75,6 @@ def reset_robot(): # Reset the robot to the initial state
     robot.simulationReset()
     for motor in motors:
         motor.setPosition(0.0)  # set all motors to default position
-    # move the robot back to the start of the track
     translation_field.setSFVec3f(initial_position)
     rotation_field.setSFRotation(initial_rotation)
     for _ in range(3): 
@@ -86,42 +83,28 @@ def reset_robot(): # Reset the robot to the initial state
 def clamp(value, min_value, max_value): # Clamp a value within a specific range
     return max(min(value, max_value), min_value)
 
-def proportional_clamp(value, min_value, max_value, min_output, max_output):
-    #amp_min, amp_max = 0, 0.5
-    #phase_min, phase_max = 0, 2 * math.pi
-    #offset_min, offset_max = -0.5, 0.5
-    clamped_value = max(min_value, min(value, max_value))
-    proportion = (clamped_value - min_value) / (max_value - min_value) #proportion of  clamped value within  input range
-    return min_output + proportion * (max_output - min_output) #Map the proportion to the output range
-
 def create_CPG_individual(): # Create an individual with random motor parameters
-    return {
-        "amplitude": [random.uniform(0, 0.5) for _ in range(PARAMS)],  ##amplitude of the sine wave
-        "phase": [random.uniform(0, 2 * math.pi) for _ in range(PARAMS)],  ##phase of the sine wave
-        "offset": [random.uniform(-0.5, 0.5) for _ in range(PARAMS)],  ##offset of the sine wave
-        "fitness": 0.0  ##fitness value of the individual
-    }
+    return {"amplitude": [random.uniform(0, 0.5) for _ in range(PARAMS)],  ##amplitude of the sine wave
+            "phase": [random.uniform(0, 2 * math.pi) for _ in range(PARAMS)],  ##phase of the sine wave
+            "offset": [random.uniform(-0.5, 0.5) for _ in range(PARAMS)],  ##offset of the sine wave
+            "fitness": 0.0}  ##fitness value of the individual
 
 def create_cyclic_individual():
-    return {
-        "amplitude": [[random.uniform(0, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##amplitude of the sine wave
-        "phase": [[random.uniform(0, 2 * math.pi) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##phase of the sine wave
-        "offset": [[random.uniform(-0.5, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##offset of the sine wave
-        "repetitions": [random.randint(1, 60) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
-        "fitness": 0.0  ##fitness value of the individual
-    }
+    return {"amplitude": [[random.uniform(0, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##amplitude of the sine wave
+            "phase": [[random.uniform(0, 2 * math.pi) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##phase of the sine wave
+            "offset": [[random.uniform(-0.5, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##offset of the sine wave
+            "repetitions": [random.randint(1, 60) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
+            "fitness": 0.0}  ##fitness value of the individual
 
 def create_position_individual(): # Create an individual with random motor positions rather than sin wave
     individual = []
     for _ in range(1, 35):
         cycle = []
         for _ in range(len(motors)):
-            # random float between -1 and 1
             position = random.uniform(-1, 1)
             position = round(position, 2)
             cycle.append(position)
         individual.append(cycle)
-    #print("individual: ", individual)
     return individual
 
 def test_population():
@@ -185,27 +168,23 @@ def evaluate(individual): # Evaluate fitness of an individual
     f = 0.75  # Gait frequency (Hz?)
 
     count, current_activation = 0, 0
-    while robot.getTime() - start_time < 20.0:  # Run the simulation for 20 seconds
+    while robot.getTime() - start_time < 12.0:  # Run the simulation for 20 seconds
         time = robot.getTime()
         for i, motor in enumerate(motors):  # iterate over all motors
-            
-            # motor position: y(t) = A * sin(2 * pi * f * t + phi) + C
-                                   #(AMPLITUDE * (sin (2 * pi * frequency * time + PHASE) + OFFSET))
+            # motor position: y(t) = A * sin(2 * pi * f * t + phi) + C ## (AMPLITUDE * (sin (2 * pi * frequency * time + PHASE) + OFFSET))
             position = (individual["amplitude"][current_activation][i] * math.sin(2.0 * math.pi * f * time + individual["phase"][current_activation][i]) + individual["offset"][current_activation][i])
-            
             motor_name = motor.getName()
             if motor_name in JOINT_LIMITS: # value clamping based on joint limits
                 min_limit, max_limit = JOINT_LIMITS[motor_name]
                 position = clamp(position, min_limit, max_limit)
-            
             motor.setPosition(position) # set the position of the motor to clamped value
-        
         robot.step(TIME_STEP)
         count += 1
         
         current_pos = gps.getValues()
-        #distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
-        distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
+        distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
+        #distance = (current_pos[0] - initial_pos[0]) + (current_pos[2] - initial_pos[2]) # x-axis and z-axis distance
+        #distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
         total_distance += distance
         max_distance = max(max_distance, distance)
         height_sum += current_pos[1]
@@ -217,8 +196,8 @@ def evaluate(individual): # Evaluate fitness of an individual
             if current_activation > (NUM_ACTIVATIONS - 1):
                 current_activation = 0
             #print("current_activation: ", current_activation, "-> reps: ", individual["repetitions"][current_activation])
-
     avg_height = height_sum / height_samples if height_samples > 0 else 0.0
+    
     fitness = max_distance + (avg_height * HEIGHT_WEIGHT)
     #print("average height: ", avg_height)
     #print("max distance: ", max_distance)
