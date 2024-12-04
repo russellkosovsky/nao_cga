@@ -111,8 +111,7 @@ def create_cyclic_individual():
         "fitness": 0.0  ##fitness value of the individual
     }
 
-# Create an individual with random motor positions rather than sin wave
-def create_position_individual():
+def create_position_individual(): # Create an individual with random motor positions rather than sin wave
     individual = []
     for _ in range(1, 35):
         cycle = []
