@@ -182,9 +182,9 @@ def evaluate(individual): # Evaluate fitness of an individual
         count += 1
         
         current_pos = gps.getValues()
-        distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
+        #distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
         #distance = (current_pos[0] - initial_pos[0]) + (current_pos[2] - initial_pos[2]) # x-axis and z-axis distance
-        #distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
+        distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
         total_distance += distance
         max_distance = max(max_distance, distance)
         height_sum += current_pos[1]
