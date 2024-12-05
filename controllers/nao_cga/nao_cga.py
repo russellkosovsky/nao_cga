@@ -7,13 +7,13 @@ from cycle import CYCLE
 ###########################################################################
 ## Constants
 ###########################################################################
-NUM_GENERATIONS = 100
-POPULATION_SIZE = 50
+NUM_GENERATIONS = 200
+POPULATION_SIZE = 100
 MUTATION_RATE = 0.075
 PARAMS = 10           # number of controlled motors
-NUM_ACTIVATIONS = 10  # number of actions (gait cycles per individual)
+NUM_ACTIVATIONS = 5  # number of actions (gait cycles per individual)
 TIME_STEP = 20        # default time step
-HEIGHT_WEIGHT = 0.3   # weight for the height component of the fitness
+HEIGHT_WEIGHT = 0.4   # weight for the height component of the fitness
 JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
                 #"LShoulderPitch": (-2.08567, 2.08567),
                 #"LShoulderRoll": (-0.314159, 1.32645),
@@ -73,13 +73,13 @@ def get_joint_limits(): # use to find the limits for each motor
     robot.step(TIME_STEP)  # Run a single simulation step to initialize devices
 
 def reset_robot(): # Reset the robot to the initial state
-    robot.simulationResetPhysics()
-    #robot.simulationReset()
+    #robot.simulationResetPhysics()
+    robot.simulationReset()
     for motor in motors:
         motor.setPosition(0.0)  # set all motors to default position
     translation_field.setSFVec3f(initial_position)
     rotation_field.setSFRotation(initial_rotation)
-    for _ in range(3): 
+    for _ in range(10): 
         robot.step(TIME_STEP)  # Step the simulation a few times to stabilize the reset
 
 def clamp(value, min_value, max_value): # Clamp a value within a specific range
@@ -166,7 +166,8 @@ def evaluate(individual): # Evaluate fitness of an individual
     robot.getDevice("LShoulderPitch").setPosition(1.6)  # move left arm down
     start_time = robot.getTime()
     initial_pos = gps.getValues()
-    max_distance, total_distance, height_sum, height_samples = 0.0, 0.0, 0.0, 0
+    max_distance, total_forward_distance, height_sum, height_samples = 0.0, 0.0, 0.0, 0
+    prev_dist = 0
     #f = 0.75  # Gait frequency (Hz?)
     f = 1.0  # Gait frequency (Hz?)
 
@@ -185,9 +186,12 @@ def evaluate(individual): # Evaluate fitness of an individual
         count += 1
         
         current_pos = gps.getValues()
-        #distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
-        distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
-        total_distance += distance
+        distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
+        #distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
+        #print(distance)
+        total_forward_distance += distance - prev_dist
+        prev_dist = distance
+
         max_distance = max(max_distance, distance)
         height_sum += current_pos[1]
         height_samples += 1
@@ -200,9 +204,9 @@ def evaluate(individual): # Evaluate fitness of an individual
     avg_height = height_sum / height_samples if height_samples > 0 else 0.0
     fitness = max_distance + (avg_height * HEIGHT_WEIGHT)
     individual["fitness"] = fitness
-    #print("average height: ", avg_height)
-    #print("max distance: ", max_distance)
-    #print("total distance: ", total_distance)
+    print("average height: ", avg_height)
+    print("max distance: ", max_distance)
+    print("total forward distance: ", total_forward_distance)
     #print("fitness: ", fitness)
     return individual["fitness"]
 
