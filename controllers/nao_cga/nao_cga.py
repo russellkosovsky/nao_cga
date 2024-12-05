@@ -190,6 +190,9 @@ def evaluate(individual): # Evaluate fitness of an individual
         forward_distance = current_pos[0] - prev_dist
         height = current_pos[2]
         #print(height)
+
+        if height > 0.1:
+            forward_distance = forward_distance * 2
         
         if forward_distance > 0:
             total_forward_distance += forward_distance
