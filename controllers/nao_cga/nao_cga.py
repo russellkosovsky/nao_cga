@@ -166,7 +166,7 @@ def evaluate(individual): # Evaluate fitness of an individual
     robot.getDevice("LShoulderPitch").setPosition(1.6)  # move left arm down
     start_time = robot.getTime()
     initial_pos = gps.getValues()
-    max_distance, total_forward_distance, height_sum, height_samples = 0.0, 0.0, 0.0, 0
+    distance, total_forward_distance, height_sum, height_samples = 0.0, 0.0, 0.0, 0
     prev_dist = 0
     f = 0.75  # Gait frequency (Hz?)
 
@@ -187,13 +187,13 @@ def evaluate(individual): # Evaluate fitness of an individual
         #print("current_pos: ", current_pos)
         #distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[1] - initial_pos[1]) ** 2)
         distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
+        forward_distance = current_pos[0] - prev_dist
         height = current_pos[2]
         #print(height)
         
-        max_distance = max(max_distance, distance)
-        if distance - prev_dist > 0:
-            total_forward_distance += distance - prev_dist
-        prev_dist = distance
+        if forward_distance > 0:
+            total_forward_distance += forward_distance
+        prev_dist = current_pos[0]
 
         height_sum += height
         height_samples += 1
@@ -206,11 +206,12 @@ def evaluate(individual): # Evaluate fitness of an individual
             #print("current_activation: ", current_activation, "-> reps: ", individual["repetitions"][current_activation])
     
     avg_height = height_sum / height_samples if height_samples > 0 else 0.0
-    fitness = max_distance + total_forward_distance + (avg_height * HEIGHT_WEIGHT)
+    fitness = distance + total_forward_distance + (height_sum * .01) + (avg_height * HEIGHT_WEIGHT)
     individual["fitness"] = fitness
-    print("average height: ", avg_height)
-    print("max distance: ", max_distance)
-    print("total forward distance: ", total_forward_distance)
+    #print("average height: ", avg_height)
+    #print("height sum: ", height_sum * .01)
+    #print("total distance: ", distance)
+    #print("total forward distance: ", total_forward_distance)
     #print("fitness: ", fitness)
     return individual["fitness"]
 
