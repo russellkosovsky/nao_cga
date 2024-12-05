@@ -12,7 +12,7 @@ POPULATION_SIZE = 50
 MUTATION_RATE = 0.075
 PARAMS = 10           # number of controlled motors
 NUM_ACTIVATIONS = 10  # number of actions (gait cycles per individual)
-TIME_STEP = 30        # default time step
+TIME_STEP = 20        # default time step
 HEIGHT_WEIGHT = 0.3   # weight for the height component of the fitness
 JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
                 #"LShoulderPitch": (-2.08567, 2.08567),
@@ -73,8 +73,8 @@ def get_joint_limits(): # use to find the limits for each motor
     robot.step(TIME_STEP)  # Run a single simulation step to initialize devices
 
 def reset_robot(): # Reset the robot to the initial state
-    #robot.simulationResetPhysics()
-    robot.simulationReset()
+    robot.simulationResetPhysics()
+    #robot.simulationReset()
     for motor in motors:
         motor.setPosition(0.0)  # set all motors to default position
     translation_field.setSFVec3f(initial_position)
@@ -162,15 +162,16 @@ def evaluate_OG(individual): # Evaluate fitness of an individual
 def evaluate(individual): # Evaluate fitness of an individual
     #print("individual: ", individual)
     reset_robot() # Reset robot to the initial state before evaluating each individual
-    robot.getDevice("RShoulderPitch").setPosition(1)  # move right arm down
-    robot.getDevice("LShoulderPitch").setPosition(1)  # move left arm down
+    robot.getDevice("RShoulderPitch").setPosition(1.6)  # move right arm down
+    robot.getDevice("LShoulderPitch").setPosition(1.6)  # move left arm down
     start_time = robot.getTime()
     initial_pos = gps.getValues()
     max_distance, total_distance, height_sum, height_samples = 0.0, 0.0, 0.0, 0
-    f = 0.75  # Gait frequency (Hz?)
+    #f = 0.75  # Gait frequency (Hz?)
+    f = 1.0  # Gait frequency (Hz?)
 
     count, current_activation = 0, 0
-    while robot.getTime() - start_time < 20.0:  # Run the simulation for 20 seconds
+    while robot.getTime() - start_time < 15.0:  # Run the simulation for 20 seconds
         time = robot.getTime()
         for i, motor in enumerate(motors):  # iterate over all motors
             # motor position: y(t) = A * sin(2 * pi * f * t + phi) + C ## (AMPLITUDE * (sin (2 * pi * frequency * time + PHASE) + OFFSET))
