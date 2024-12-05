@@ -9,9 +9,9 @@ from cycle import CYCLE
 ###########################################################################
 NUM_GENERATIONS = 200
 POPULATION_SIZE = 100
-MUTATION_RATE = 0.075
+MUTATION_RATE = 0.03
 PARAMS = 10           # number of controlled motors
-NUM_ACTIVATIONS = 5  # number of actions (gait cycles per individual)
+NUM_ACTIVATIONS = 8  # number of actions (gait cycles per individual)
 TIME_STEP = 20        # default time step
 HEIGHT_WEIGHT = 0.4   # weight for the height component of the fitness
 JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
