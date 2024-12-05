@@ -168,8 +168,7 @@ def evaluate(individual): # Evaluate fitness of an individual
     initial_pos = gps.getValues()
     max_distance, total_forward_distance, height_sum, height_samples = 0.0, 0.0, 0.0, 0
     prev_dist = 0
-    #f = 0.75  # Gait frequency (Hz?)
-    f = 1.0  # Gait frequency (Hz?)
+    f = 0.75  # Gait frequency (Hz?)
 
     count, current_activation = 0, 0
     while robot.getTime() - start_time < 15.0:  # Run the simulation for 20 seconds
@@ -184,25 +183,30 @@ def evaluate(individual): # Evaluate fitness of an individual
             motor.setPosition(position) # set the position of the motor to clamped value
         robot.step(TIME_STEP)
         count += 1
-        
         current_pos = gps.getValues()
-        distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[2] - initial_pos[2]) ** 2)
-        #distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
-        #print(distance)
-        total_forward_distance += distance - prev_dist
+        #print("current_pos: ", current_pos)
+        #distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[1] - initial_pos[1]) ** 2)
+        distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
+        height = current_pos[2]
+        #print(height)
+        
+        max_distance = max(max_distance, distance)
+        if distance - prev_dist > 0:
+            total_forward_distance += distance - prev_dist
         prev_dist = distance
 
-        max_distance = max(max_distance, distance)
-        height_sum += current_pos[1]
+        height_sum += height
         height_samples += 1
+        
         if count >= individual["repetitions"][current_activation]:
             count = 0
             current_activation += 1
             if current_activation > (NUM_ACTIVATIONS - 1):
                 current_activation = 0
             #print("current_activation: ", current_activation, "-> reps: ", individual["repetitions"][current_activation])
+    
     avg_height = height_sum / height_samples if height_samples > 0 else 0.0
-    fitness = max_distance + (avg_height * HEIGHT_WEIGHT)
+    fitness = max_distance + total_forward_distance + (avg_height * HEIGHT_WEIGHT)
     individual["fitness"] = fitness
     print("average height: ", avg_height)
     print("max distance: ", max_distance)
