@@ -15,8 +15,8 @@ WorldInfo {
   ]
   title "Humanoid Sprint"
   window "humanoid_sprint"
-  basicTimeStep 20
-  FPS 20
+  basicTimeStep 30
+  FPS 30
   contactProperties [
     ContactProperties {
       material1 "NAO foot material"
@@ -34,11 +34,11 @@ Viewpoint {
   followType "None"
 }
 TexturedBackground {
-  texture "noon_cloudy_countryside"
+  texture "noon_sunny_empty"
 }
 TexturedBackgroundLight {
-  texture "noon_cloudy_countryside"
-  luminosity 0.4
+  texture "noon_sunny_empty"
+  luminosity 0.7
   castShadows FALSE
 }
 SpotLight {
@@ -113,6 +113,7 @@ DEF GRASS Solid {
 }
 DEF NAO Nao {
   translation -5.345 0.65 0.334
+  version "V5 (blue)"
   controller "nao_cga"
   supervisor TRUE
   selfCollision TRUE

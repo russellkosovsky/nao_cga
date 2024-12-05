@@ -10,23 +10,23 @@ from cycle import CYCLE
 NUM_GENERATIONS = 100
 POPULATION_SIZE = 50
 MUTATION_RATE = 0.075
-PARAMS = 16           # number of controlled motors
+PARAMS = 10           # number of controlled motors
 NUM_ACTIVATIONS = 10  # number of actions (gait cycles per individual)
-TIME_STEP = 20        # default time step
+TIME_STEP = 30        # default time step
 HEIGHT_WEIGHT = 0.3   # weight for the height component of the fitness
 JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
-                "LShoulderPitch": (-2.08567, 2.08567),
-                "LShoulderRoll": (-0.314159, 1.32645),
-                "LHipYawPitch": (-1.14529, 0.740718),
+                #"LShoulderPitch": (-2.08567, 2.08567),
+                #"LShoulderRoll": (-0.314159, 1.32645),
+                #"LHipYawPitch": (-1.14529, 0.740718),
                 "LHipRoll": (-0.379435, 0.79046),
                 "LHipPitch": (-1.77378, 0.48398),
                 "LKneePitch": (-0.0923279, 2.11255),
                 "LAnklePitch": (-1.18944, 0.922581),
                 "LAnkleRoll": (-0.39788, 0.769001),
                 #######################################
-                "RShoulderPitch": (-2.08567, 2.08567),
-                "RShoulderRoll": (-1.32645, 0.314159),
-                "RHipYawPitch": (-1.14529, 0.740718),
+                #"RShoulderPitch": (-2.08567, 2.08567),
+                #"RShoulderRoll": (-1.32645, 0.314159),
+                #"RHipYawPitch": (-1.14529, 0.740718),
                 "RHipRoll": (-0.738274, 0.449597),
                 "RHipPitch": (-1.77378, 0.48398),
                 "RKneePitch": (-0.0923279, 2.11255),
@@ -44,10 +44,10 @@ gps.enable(TIME_STEP)
 ###########################################################################
 ## Motor Initialization
 ###########################################################################
-motor_names = ["LShoulderPitch", "LShoulderRoll", "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll",
-               "RShoulderPitch", "RShoulderRoll", "RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
-#motor_names = ["LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll", 
- #              "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
+#motor_names = ["LShoulderPitch", "LShoulderRoll", "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll",
+ #              "RShoulderPitch", "RShoulderRoll", "RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
+motor_names = ["LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll", 
+               "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
 motors = [robot.getDevice(name) for name in motor_names]
 for motor in motors:
     motor.setPosition(0.0)  # set all motors to default position
@@ -170,7 +170,7 @@ def evaluate(individual): # Evaluate fitness of an individual
     f = 0.75  # Gait frequency (Hz?)
 
     count, current_activation = 0, 0
-    while robot.getTime() - start_time < 12.0:  # Run the simulation for 20 seconds
+    while robot.getTime() - start_time < 20.0:  # Run the simulation for 20 seconds
         time = robot.getTime()
         for i, motor in enumerate(motors):  # iterate over all motors
             # motor position: y(t) = A * sin(2 * pi * f * t + phi) + C ## (AMPLITUDE * (sin (2 * pi * frequency * time + PHASE) + OFFSET))
