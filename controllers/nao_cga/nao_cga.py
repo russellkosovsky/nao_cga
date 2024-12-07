@@ -4,11 +4,13 @@ import math
 import random
 import time
 from cycle import CYCLE
+import wandb
 ###########################################################################
 ## Constants
 ###########################################################################
+WANDB = True
 NUM_GENERATIONS = 200
-POPULATION_SIZE = 100
+POPULATION_SIZE = 50
 MUTATION_RATE = 0.03
 PARAMS = 6           # number of controlled motors
 NUM_ACTIVATIONS = 8  # number of actions (gait cycles per individual)
@@ -33,6 +35,15 @@ JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
                 "RAnklePitch": (-1.1863, 0.932006),
                 #"RAnkleRoll": (-0.768992, 0.397935)
                }
+
+wandb.init(
+    project="nao_cga", 
+    config={"num_generations": NUM_GENERATIONS,
+            "population_size": POPULATION_SIZE, 
+            "mutation_rate": MUTATION_RATE,
+            "num_joints": PARAMS,
+            "num_activations": NUM_ACTIVATIONS}
+)
 
 ###########################################################################
 ## Initialize Supervisor and Devices
@@ -346,11 +357,18 @@ def main(): # Main Loop
             print("  Individual", i+1, "->", f"Fitness: {individual['fitness']:.3f}")
             #print("  Individual", i+1, "->", f"Fitness: {fit:.3f}")
         
-        best_individual = max(population, key=lambda ind: ind["fitness"])
         #best_individual = max(population, key=lambda ind: fit)
+        best_individual = max(population, key=lambda ind: ind["fitness"])
         best_individuals.append(best_individual)
+
+        best_fitness = best_individual["fitness"]
+        mean_fitness = sum(ind["fitness"] for ind in population) / POPULATION_SIZE
         print(f"Best Individual in Generation {gen}: {best_individual['fitness']:.3f}")
         #print(f"Best Individual in Generation {gen}: {fit:.3f}")
+
+        if WANDB:
+            wandb.log({"Best Fitness": best_fitness, "Mean Fitness": mean_fitness})
+        
         population = evolve_population(population)
 
     print("############## Evolution Complete ##############")
