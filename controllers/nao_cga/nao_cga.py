@@ -10,7 +10,7 @@ from cycle import CYCLE
 NUM_GENERATIONS = 200
 POPULATION_SIZE = 100
 MUTATION_RATE = 0.03
-PARAMS = 10           # number of controlled motors
+PARAMS = 6           # number of controlled motors
 NUM_ACTIVATIONS = 8  # number of actions (gait cycles per individual)
 TIME_STEP = 20        # default time step
 HEIGHT_WEIGHT = 0.4   # weight for the height component of the fitness
@@ -18,20 +18,20 @@ JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
                 #"LShoulderPitch": (-2.08567, 2.08567),
                 #"LShoulderRoll": (-0.314159, 1.32645),
                 #"LHipYawPitch": (-1.14529, 0.740718),
-                "LHipRoll": (-0.379435, 0.79046),
+                #"LHipRoll": (-0.379435, 0.79046),
                 "LHipPitch": (-1.77378, 0.48398),
                 "LKneePitch": (-0.0923279, 2.11255),
                 "LAnklePitch": (-1.18944, 0.922581),
-                "LAnkleRoll": (-0.39788, 0.769001),
+                #"LAnkleRoll": (-0.39788, 0.769001),
                 #######################################
                 #"RShoulderPitch": (-2.08567, 2.08567),
                 #"RShoulderRoll": (-1.32645, 0.314159),
                 #"RHipYawPitch": (-1.14529, 0.740718),
-                "RHipRoll": (-0.738274, 0.449597),
+                #"RHipRoll": (-0.738274, 0.449597),
                 "RHipPitch": (-1.77378, 0.48398),
                 "RKneePitch": (-0.0923279, 2.11255),
                 "RAnklePitch": (-1.1863, 0.932006),
-                "RAnkleRoll": (-0.768992, 0.397935)
+                #"RAnkleRoll": (-0.768992, 0.397935)
                }
 
 ###########################################################################
@@ -46,8 +46,8 @@ gps.enable(TIME_STEP)
 ###########################################################################
 #motor_names = ["LShoulderPitch", "LShoulderRoll", "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll",
  #              "RShoulderPitch", "RShoulderRoll", "RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
-motor_names = ["LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll", 
-               "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
+motor_names = ["LHipPitch", "LKneePitch", "LAnklePitch", 
+               "RHipPitch", "RKneePitch", "RAnklePitch"]
 motors = [robot.getDevice(name) for name in motor_names]
 for motor in motors:
     motor.setPosition(0.0)  # set all motors to default position
@@ -191,7 +191,7 @@ def evaluate(individual): # Evaluate fitness of an individual
         height = current_pos[2]
         #print(height)
 
-        if height > 0.1:
+        if height > 0.15:
             forward_distance = forward_distance * 2
         
         if forward_distance > 0:
@@ -209,7 +209,7 @@ def evaluate(individual): # Evaluate fitness of an individual
             #print("current_activation: ", current_activation, "-> reps: ", individual["repetitions"][current_activation])
     
     avg_height = height_sum / height_samples if height_samples > 0 else 0.0
-    fitness = distance + total_forward_distance + (height_sum * .01) + (avg_height * HEIGHT_WEIGHT)
+    fitness = total_forward_distance + (height_sum * .01) + (avg_height * HEIGHT_WEIGHT)
     individual["fitness"] = fitness
     #print("average height: ", avg_height)
     #print("height sum: ", height_sum * .01)
