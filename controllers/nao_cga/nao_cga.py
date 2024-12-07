@@ -9,10 +9,11 @@ import wandb
 ## Constants
 ###########################################################################
 WANDB = True
+#WANDB = False
 NUM_GENERATIONS = 200
-POPULATION_SIZE = 50
+POPULATION_SIZE = 100
 MUTATION_RATE = 0.03
-PARAMS = 6           # number of controlled motors
+PARAMS = 8           # number of controlled motors
 NUM_ACTIVATIONS = 8  # number of actions (gait cycles per individual)
 TIME_STEP = 20        # default time step
 HEIGHT_WEIGHT = 0.4   # weight for the height component of the fitness
@@ -20,7 +21,7 @@ JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
                 #"LShoulderPitch": (-2.08567, 2.08567),
                 #"LShoulderRoll": (-0.314159, 1.32645),
                 #"LHipYawPitch": (-1.14529, 0.740718),
-                #"LHipRoll": (-0.379435, 0.79046),
+                "LHipRoll": (-0.379435, 0.79046),
                 "LHipPitch": (-1.77378, 0.48398),
                 "LKneePitch": (-0.0923279, 2.11255),
                 "LAnklePitch": (-1.18944, 0.922581),
@@ -29,21 +30,22 @@ JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
                 #"RShoulderPitch": (-2.08567, 2.08567),
                 #"RShoulderRoll": (-1.32645, 0.314159),
                 #"RHipYawPitch": (-1.14529, 0.740718),
-                #"RHipRoll": (-0.738274, 0.449597),
+                "RHipRoll": (-0.738274, 0.449597),
                 "RHipPitch": (-1.77378, 0.48398),
                 "RKneePitch": (-0.0923279, 2.11255),
                 "RAnklePitch": (-1.1863, 0.932006),
                 #"RAnkleRoll": (-0.768992, 0.397935)
                }
 
-wandb.init(
-    project="nao_cga", 
-    config={"num_generations": NUM_GENERATIONS,
-            "population_size": POPULATION_SIZE, 
-            "mutation_rate": MUTATION_RATE,
-            "num_joints": PARAMS,
-            "num_activations": NUM_ACTIVATIONS}
-)
+if WANDB:
+    wandb.init(
+        project="nao_cga", 
+        config={"num_generations": NUM_GENERATIONS,
+                "population_size": POPULATION_SIZE, 
+                "mutation_rate": MUTATION_RATE,
+                "num_joints": PARAMS,
+                "num_activations": NUM_ACTIVATIONS}
+    )
 
 ###########################################################################
 ## Initialize Supervisor and Devices
@@ -57,8 +59,8 @@ gps.enable(TIME_STEP)
 ###########################################################################
 #motor_names = ["LShoulderPitch", "LShoulderRoll", "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll",
  #              "RShoulderPitch", "RShoulderRoll", "RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
-motor_names = ["LHipPitch", "LKneePitch", "LAnklePitch", 
-               "RHipPitch", "RKneePitch", "RAnklePitch"]
+motor_names = ["LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", 
+               "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch"]
 motors = [robot.getDevice(name) for name in motor_names]
 for motor in motors:
     motor.setPosition(0.0)  # set all motors to default position
