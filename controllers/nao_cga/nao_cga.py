@@ -108,7 +108,7 @@ def create_cyclic_individual():
     return {"amplitude": [[random.uniform(0, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##amplitude of the sine wave
             "phase": [[random.uniform(0, 2 * math.pi) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##phase of the sine wave
             "offset": [[random.uniform(-0.5, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##offset of the sine wave
-            "repetitions": [random.randint(1, 60) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
+            "repetitions": [random.randint(20, 60) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
             "fitness": 0.0}  ##fitness value of the individual
 
 def create_position_individual(): # Create an individual with random motor positions rather than sin wave
