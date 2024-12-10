@@ -110,20 +110,6 @@ DEF GRASS Solid {
   locked TRUE
 }
 DEF NAO Nao {
-  hidden rotation_22 0 1 0 0.9599999518257396
-  hidden rotation_23 0 1 0 0.959999975839099
-  hidden rotation_24 0 1 0 0.959999997865723
-  hidden rotation_25 0 1 0 0.959999979914978
-  hidden rotation_26 0 1 0 0.9599999893316615
-  hidden rotation_27 0 1 0 0.9600000002270508
-  hidden rotation_29 0 -1 0 0.9599999930402626
-  hidden rotation_34 0 1 0 0.9599999504378077
-  hidden rotation_35 0 1 0 0.9599999736490321
-  hidden rotation_36 0 1 0 0.9599999965830974
-  hidden rotation_37 0 1 0 0.9599999524908278
-  hidden rotation_38 0 1 0 0.9599999743179845
-  hidden rotation_39 0 1 0 0.9599999990019142
-  hidden rotation_41 0 -1 0 0.9599999923532753
   translation -5.345 0.65 0.334
   version "V5 (blue)"
   controller "nao_cga"

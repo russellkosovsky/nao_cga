@@ -13,11 +13,11 @@ WANDB = True
 NUM_GENERATIONS = 200
 POPULATION_SIZE = 100
 MUTATION_RATE = 0.03
-PARAMS = 8           # number of controlled motors
-NUM_ACTIVATIONS = 8  # number of actions (gait cycles per individual)
-TIME_STEP = 20        # default time step
-HEIGHT_WEIGHT = 0.4   # weight for the height component of the fitness
-JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
+PARAMS = 10          # number of controlled motors
+NUM_ACTIVATIONS = 10 # number of actions (gait cycles per individual)
+TIME_STEP = 20       # default time step
+HEIGHT_WEIGHT = 0.4  # weight for the height component of the fitness
+JOINT_LIMITS = {     # joint limits for the Nao robot (for clamping)
                 #"LShoulderPitch": (-2.08567, 2.08567),
                 #"LShoulderRoll": (-0.314159, 1.32645),
                 #"LHipYawPitch": (-1.14529, 0.740718),
@@ -25,7 +25,7 @@ JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
                 "LHipPitch": (-1.77378, 0.48398),
                 "LKneePitch": (-0.0923279, 2.11255),
                 "LAnklePitch": (-1.18944, 0.922581),
-                #"LAnkleRoll": (-0.39788, 0.769001),
+                "LAnkleRoll": (-0.39788, 0.769001),
                 #######################################
                 #"RShoulderPitch": (-2.08567, 2.08567),
                 #"RShoulderRoll": (-1.32645, 0.314159),
@@ -34,7 +34,7 @@ JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
                 "RHipPitch": (-1.77378, 0.48398),
                 "RKneePitch": (-0.0923279, 2.11255),
                 "RAnklePitch": (-1.1863, 0.932006),
-                #"RAnkleRoll": (-0.768992, 0.397935)
+                "RAnkleRoll": (-0.768992, 0.397935)
                }
 
 if WANDB:
@@ -59,8 +59,8 @@ gps.enable(TIME_STEP)
 ###########################################################################
 #motor_names = ["LShoulderPitch", "LShoulderRoll", "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll",
  #              "RShoulderPitch", "RShoulderRoll", "RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
-motor_names = ["LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", 
-               "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch"]
+motor_names = ["LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll",
+               "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch" "LAnkleRoll"]
 motors = [robot.getDevice(name) for name in motor_names]
 for motor in motors:
     motor.setPosition(0.0)  # set all motors to default position
@@ -108,7 +108,7 @@ def create_cyclic_individual():
     return {"amplitude": [[random.uniform(0, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##amplitude of the sine wave
             "phase": [[random.uniform(0, 2 * math.pi) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##phase of the sine wave
             "offset": [[random.uniform(-0.5, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##offset of the sine wave
-            "repetitions": [random.randint(20, 60) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
+            "repetitions": [random.randint(0, 80) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
             "fitness": 0.0}  ##fitness value of the individual
 
 def create_position_individual(): # Create an individual with random motor positions rather than sin wave
@@ -204,8 +204,8 @@ def evaluate(individual): # Evaluate fitness of an individual
         height = current_pos[2]
         #print(height)
 
-        if height > 0.15:
-            forward_distance = forward_distance * 2
+        #if height > 0.15:
+         #   forward_distance = forward_distance * 2
         
         if forward_distance > 0:
             total_forward_distance += forward_distance
