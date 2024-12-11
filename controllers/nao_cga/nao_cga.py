@@ -381,6 +381,8 @@ def select_parent(population):
 def evolve_population(population): # Evolutionary process to create a new generation
     population.sort(key=lambda ind: ind["fitness"], reverse=True)
     new_population = population[:25] # keep the top 20 individuals
+    for ind in new_population:
+        mutate(ind)
     while len(new_population) < POPULATION_SIZE - 3:
         parent1, parent2 = select_parent(population), select_parent(population)
         child = crossover(parent1, parent2)
