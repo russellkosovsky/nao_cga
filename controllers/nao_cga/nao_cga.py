@@ -8,16 +8,16 @@ from controller import Robot, GPS, Supervisor
 ###########################################################################
 ## Constants
 ###########################################################################
-#WANDB = True
-WANDB = False
+WANDB = True
+#WANDB = False
 NUM_GENERATIONS = 200
 POPULATION_SIZE = 100
-MUTATION_RATE = 0.03
+MUTATION_RATE = 0.015
 PARAMS = 10           # number of controlled motors
-NUM_ACTIVATIONS = 10  # number of actions (gait cycles per individual)
+NUM_ACTIVATIONS = 20  # number of actions (gait cycles per individual)
 TIME_STEP = 20        # default time step
-HEIGHT_WEIGHT = 0.4   # weight for the height component of the fitness
-""" JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
+HEIGHT_WEIGHT = 10    # weight for the height component of the fitness
+"""JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
                 "LShoulderPitch": (-2.08567, 2.08567),
                 "LShoulderRoll": (-0.314159, 1.32645),
                 "LHipYawPitch": (-1.14529, 0.740718),
@@ -36,7 +36,6 @@ HEIGHT_WEIGHT = 0.4   # weight for the height component of the fitness
                 "RAnklePitch": (-1.1863, 0.932006),
                 "RAnkleRoll": (-0.768992, 0.397935)
                } """
-
 JOINT_LIMITS = {      # restricted joint limits for the Nao robot
                 "LShoulderPitch": (-2.0, 2.0),
                 "LShoulderRoll":  (-0.3, 1.3),
@@ -143,7 +142,7 @@ def create_cyclic_individual():
     return {"amplitude": [[random.uniform(0, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##amplitude of the sine wave
             "phase": [[random.uniform(0, 2 * math.pi) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##phase of the sine wave
             "offset": [[random.uniform(-0.5, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##offset of the sine wave
-            "repetitions": [random.randint(0, 60) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
+            "repetitions": [random.randint(10, 40) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
             "fitness": 0.0}  ##fitness value of the individual
 
 def create_position_individual(): # Create an individual with random motor positions rather than sin wave
@@ -214,7 +213,7 @@ def evaluate(individual): # Evaluate fitness of an individual
     robot.getDevice("LShoulderPitch").setPosition(1.6)  # move left arm down
     start_time = robot.getTime()
     initial_pos = gps.getValues()
-    distance, total_forward_distance, height_sum, height_samples = 0.0, 0.0, 0.0, 0
+    distance, total_forward_distance, height_sum, height_samples, height_bonus = 0.0, 0.0, 0.0, 0, 0.0
     prev_dist = 0
     f = 0.75  # Gait frequency (Hz?)
 
@@ -234,14 +233,20 @@ def evaluate(individual): # Evaluate fitness of an individual
         current_pos = gps.getValues()
         #print("current_pos: ", current_pos)
         #distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[1] - initial_pos[1]) ** 2)
-        #distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
-        distance += current_pos[0] - prev_dist
+        distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
         forward_distance = current_pos[0] - prev_dist
         height = current_pos[2]
         #print(height)
-
-        #if height > 0.15:
-         #   forward_distance = forward_distance * 2
+        
+        if height > 0.1:
+            forward_distance = forward_distance * 2
+            height_bonus += 0.0001
+        elif height < 0.22:
+            forward_distance = forward_distance * 2.5
+            height_bonus += 0.0002
+        elif height < 0.31:
+            forward_distance = forward_distance * 3
+            height_bonus += 0.0003
         
         if forward_distance > 0:
             total_forward_distance += forward_distance
@@ -258,14 +263,16 @@ def evaluate(individual): # Evaluate fitness of an individual
             #print("current_activation: ", current_activation, "-> reps: ", individual["repetitions"][current_activation])
     
     avg_height = height_sum / height_samples if height_samples > 0 else 0.0
-    fitness = total_forward_distance + (height_sum * .01) + (avg_height * HEIGHT_WEIGHT)
+    fitness = distance + total_forward_distance + height_bonus + (avg_height * HEIGHT_WEIGHT)
+    #fitness = total_forward_distance + (avg_height * HEIGHT_WEIGHT)
+    
     individual["fitness"] = fitness
-    print("---------------------------------------------------")
-    print("  average height: ", avg_height)
-    print("  height sum: ", height_sum * .01)
-    #print("  total distance: ", distance)
-    print("  total forward distance: ", total_forward_distance)
-    #print("  fitness: ", fitness)
+    print("____     average height:", avg_height)
+    print("____         height sum:", height_sum * .01)
+    print("____       height bonus:", height_bonus)
+    print("____     total distance:", distance)
+    print("____   forward distance:", total_forward_distance)
+    print("____            FITNESS:", fitness)
     return individual["fitness"]
 
 def evaluate_positional(individual): # Evaluate fitness of an individual
@@ -373,11 +380,15 @@ def select_parent(population):
 
 def evolve_population(population): # Evolutionary process to create a new generation
     population.sort(key=lambda ind: ind["fitness"], reverse=True)
-    new_population = population[:POPULATION_SIZE // 2]
-    while len(new_population) < POPULATION_SIZE:
+    #new_population = population[:POPULATION_SIZE // 2] # keep the top half of the population
+    new_population = population[:10] # keep the top 10 individuals
+    print("LEN NEW POPULATION: ", len(new_population))
+    while len(new_population) < POPULATION_SIZE - 5:
         parent1, parent2 = select_parent(population), select_parent(population)
         child = crossover(parent1, parent2)
         new_population.append(child)
+    while len(new_population) < POPULATION_SIZE:
+        new_population.append(create_cyclic_individual())
     return new_population
 
 ##########################################################################################
@@ -390,10 +401,13 @@ def main(): # Main Loop
     for gen in range(NUM_GENERATIONS):
         print(f"############## Generation {gen+1} ##############")
         for i, individual in enumerate(population):
+            print(" ")
+            print("------------------ Evaluating Individual", i+1, "------------------------")
+            print(" ")
             individual["fitness"] = evaluate(individual)
             #fit = evaluate_positional(individual)
             reset_robot()
-            print("  Individual", i+1, "->", f"Fitness: {individual['fitness']:.3f}")
+            #print("  Individual", i+1, "->", f"Fitness: {individual['fitness']:.3f}")
             #print("  Individual", i+1, "->", f"Fitness: {fit:.3f}")
         
         #best_individual = max(population, key=lambda ind: fit)
