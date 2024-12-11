@@ -13,7 +13,7 @@ WANDB = False
 NUM_GENERATIONS = 200
 POPULATION_SIZE = 100
 MUTATION_RATE = 0.03
-PARAMS = 12           # number of controlled motors
+PARAMS = 10           # number of controlled motors
 NUM_ACTIVATIONS = 10  # number of actions (gait cycles per individual)
 TIME_STEP = 20        # default time step
 HEIGHT_WEIGHT = 0.4   # weight for the height component of the fitness
@@ -37,24 +37,24 @@ HEIGHT_WEIGHT = 0.4   # weight for the height component of the fitness
                 "RAnkleRoll": (-0.768992, 0.397935)
                } """
 
-JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
-                "LShoulderPitch": (-1, 1),
-                "LShoulderRoll":  (0, 1),
-                "LHipYawPitch":   (-0.54529, 0.440718),
-                "LHipRoll":       (-0.2, 0.49046),
-                "LHipPitch":      (-1.0, 0.28398),
-                "LKneePitch":     (0.0, 1.11255),
-                "LAnklePitch":    (-0.18944, 0.522581),
-                "LAnkleRoll":     (0.0, 0.369001),
+JOINT_LIMITS = {      # restricted joint limits for the Nao robot
+                "LShoulderPitch": (-2.0, 2.0),
+                "LShoulderRoll":  (-0.3, 1.3),
+                "LHipYawPitch":   (-0.5, 0.4),
+                "LHipRoll":       (-0.2, 0.2),
+                "LHipPitch":      (-0.8, 0.0),
+                "LKneePitch":     (0.5, 1.5),
+                "LAnklePitch":    (-0.9, 0.0),
+                "LAnkleRoll":     (-0.2, 0.2),
                 #######################################
-                "RShoulderPitch": (-1.08567, 1.08567),
-                "RShoulderRoll":  (-1.0, 0.3),
-                "RHipYawPitch":   (-0.64529, 0.440718),
-                "RHipRoll":       (0.0, 0.249597),
-                "RHipPitch":      (-1.0, 0.28398),
-                "RKneePitch":     (0.0, 1.11255),
-                "RAnklePitch":    (-0.3863, 0.432006),
-                "RAnkleRoll":     (-0.268992, 0.197935)
+                "RShoulderPitch": (-2.0, 2.0),
+                "RShoulderRoll":  (-1.3, 0.3),
+                "RHipYawPitch":   (-0.6, 0.4),
+                "RHipRoll":       (-0.25, 0.2),
+                "RHipPitch":      (-0.9, 0.0),
+                "RKneePitch":     (0.6, 1.5),
+                "RAnklePitch":    (-0.9, 0.0),
+                "RAnkleRoll":     (-0.2, 0.2)
                }
 
 if WANDB:
@@ -80,7 +80,7 @@ gps.enable(TIME_STEP)
 motor_names = [
                #"LShoulderPitch",
                #"LShoulderRoll",
-               "LHipYawPitch",
+               #"LHipYawPitch",
                "LHipRoll",
                "LHipPitch",
                "LKneePitch",
@@ -89,7 +89,7 @@ motor_names = [
                ###############
                #"RShoulderPitch",
                #"RShoulderRoll",
-               "RHipYawPitch",
+               #"RHipYawPitch",
                "RHipRoll",
                "RHipPitch",
                "RKneePitch",
@@ -143,7 +143,7 @@ def create_cyclic_individual():
     return {"amplitude": [[random.uniform(0, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##amplitude of the sine wave
             "phase": [[random.uniform(0, 2 * math.pi) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##phase of the sine wave
             "offset": [[random.uniform(-0.5, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##offset of the sine wave
-            "repetitions": [random.randint(0, 80) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
+            "repetitions": [random.randint(0, 60) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
             "fitness": 0.0}  ##fitness value of the individual
 
 def create_position_individual(): # Create an individual with random motor positions rather than sin wave
@@ -219,7 +219,7 @@ def evaluate(individual): # Evaluate fitness of an individual
     f = 0.75  # Gait frequency (Hz?)
 
     count, current_activation = 0, 0
-    while robot.getTime() - start_time < 15.0:  # Run the simulation for 20 seconds
+    while robot.getTime() - start_time < 10.0:  # Run the simulation for 20 seconds
         time = robot.getTime()
         for i, motor in enumerate(motors):  # iterate over all motors
             # motor position: y(t) = A * sin(2 * pi * f * t + phi) + C ## (AMPLITUDE * (sin (2 * pi * frequency * time + PHASE) + OFFSET))
@@ -234,7 +234,8 @@ def evaluate(individual): # Evaluate fitness of an individual
         current_pos = gps.getValues()
         #print("current_pos: ", current_pos)
         #distance = math.sqrt((current_pos[0] - initial_pos[0]) ** 2 + (current_pos[1] - initial_pos[1]) ** 2)
-        distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
+        #distance = current_pos[0] - initial_pos[0] # only x-axis (forward) distance
+        distance += current_pos[0] - prev_dist
         forward_distance = current_pos[0] - prev_dist
         height = current_pos[2]
         #print(height)
@@ -259,11 +260,12 @@ def evaluate(individual): # Evaluate fitness of an individual
     avg_height = height_sum / height_samples if height_samples > 0 else 0.0
     fitness = total_forward_distance + (height_sum * .01) + (avg_height * HEIGHT_WEIGHT)
     individual["fitness"] = fitness
-    #print("average height: ", avg_height)
-    #print("height sum: ", height_sum * .01)
-    #print("total distance: ", distance)
-    #print("total forward distance: ", total_forward_distance)
-    #print("fitness: ", fitness)
+    print("---------------------------------------------------")
+    print("  average height: ", avg_height)
+    print("  height sum: ", height_sum * .01)
+    #print("  total distance: ", distance)
+    print("  total forward distance: ", total_forward_distance)
+    #print("  fitness: ", fitness)
     return individual["fitness"]
 
 def evaluate_positional(individual): # Evaluate fitness of an individual
