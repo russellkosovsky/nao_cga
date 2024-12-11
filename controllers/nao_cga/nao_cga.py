@@ -13,11 +13,11 @@ WANDB = False
 NUM_GENERATIONS = 200
 POPULATION_SIZE = 100
 MUTATION_RATE = 0.03
-PARAMS = 10           # number of controlled motors
+PARAMS = 12           # number of controlled motors
 NUM_ACTIVATIONS = 10  # number of actions (gait cycles per individual)
 TIME_STEP = 20        # default time step
 HEIGHT_WEIGHT = 0.4   # weight for the height component of the fitness
-JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
+""" JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
                 "LShoulderPitch": (-2.08567, 2.08567),
                 "LShoulderRoll": (-0.314159, 1.32645),
                 "LHipYawPitch": (-1.14529, 0.740718),
@@ -35,6 +35,26 @@ JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
                 "RKneePitch": (-0.0923279, 2.11255),
                 "RAnklePitch": (-1.1863, 0.932006),
                 "RAnkleRoll": (-0.768992, 0.397935)
+               } """
+
+JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
+                "LShoulderPitch": (-1, 1),
+                "LShoulderRoll":  (0, 1),
+                "LHipYawPitch":   (-0.54529, 0.440718),
+                "LHipRoll":       (-0.2, 0.49046),
+                "LHipPitch":      (-1.0, 0.28398),
+                "LKneePitch":     (0.0, 1.11255),
+                "LAnklePitch":    (-0.18944, 0.522581),
+                "LAnkleRoll":     (0.0, 0.369001),
+                #######################################
+                "RShoulderPitch": (-1.08567, 1.08567),
+                "RShoulderRoll":  (-1.0, 0.3),
+                "RHipYawPitch":   (-0.64529, 0.440718),
+                "RHipRoll":       (0.0, 0.249597),
+                "RHipPitch":      (-1.0, 0.28398),
+                "RKneePitch":     (0.0, 1.11255),
+                "RAnklePitch":    (-0.3863, 0.432006),
+                "RAnkleRoll":     (-0.268992, 0.197935)
                }
 
 if WANDB:
@@ -60,7 +80,7 @@ gps.enable(TIME_STEP)
 motor_names = [
                #"LShoulderPitch",
                #"LShoulderRoll",
-               #"LHipYawPitch",
+               "LHipYawPitch",
                "LHipRoll",
                "LHipPitch",
                "LKneePitch",
@@ -69,7 +89,7 @@ motor_names = [
                ###############
                #"RShoulderPitch",
                #"RShoulderRoll",
-               #"RHipYawPitch",
+               "RHipYawPitch",
                "RHipRoll",
                "RHipPitch",
                "RKneePitch",
