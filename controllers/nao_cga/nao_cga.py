@@ -380,11 +380,11 @@ def select_parent(population):
 
 def evolve_population(population): # Evolutionary process to create a new generation
     population.sort(key=lambda ind: ind["fitness"], reverse=True)
-    #new_population = population[:POPULATION_SIZE // 2] # keep the top half of the population
+    top_half = population[:POPULATION_SIZE // 2] # keep the top half of the population
     new_population = population[:10] # keep the top 10 individuals
-    print("LEN NEW POPULATION: ", len(new_population))
     while len(new_population) < POPULATION_SIZE - 5:
-        parent1, parent2 = select_parent(population), select_parent(population)
+        #parent1, parent2 = select_parent(population), select_parent(population)
+        parent1, parent2 = select_parent(top_half), select_parent(top_half)
         child = crossover(parent1, parent2)
         new_population.append(child)
     while len(new_population) < POPULATION_SIZE:
@@ -394,41 +394,35 @@ def evolve_population(population): # Evolutionary process to create a new genera
 ##########################################################################################
 def main(): # Main Loop
     #population = [create_CPG_individual() for _ in range(POPULATION_SIZE)]
-    population = [create_cyclic_individual() for _ in range(POPULATION_SIZE)]
     #population = [create_position_individual() for _ in range(POPULATION_SIZE)]
-    
+    population = [create_cyclic_individual() for _ in range(POPULATION_SIZE)]
     best_individuals = []
     for gen in range(NUM_GENERATIONS):
+        print(" ")
+        print("#####################################################")
         print(f"############## Generation {gen+1} ##############")
+        print("#####################################################")
+        print(" ")
         for i, individual in enumerate(population):
             print(" ")
             print("------------------ Evaluating Individual", i+1, "------------------------")
             print(" ")
             individual["fitness"] = evaluate(individual)
-            #fit = evaluate_positional(individual)
             reset_robot()
-            #print("  Individual", i+1, "->", f"Fitness: {individual['fitness']:.3f}")
-            #print("  Individual", i+1, "->", f"Fitness: {fit:.3f}")
         
-        #best_individual = max(population, key=lambda ind: fit)
         best_individual = max(population, key=lambda ind: ind["fitness"])
         best_individuals.append(best_individual)
 
         best_fitness = best_individual["fitness"]
         mean_fitness = sum(ind["fitness"] for ind in population) / POPULATION_SIZE
         print(f"Best Individual in Generation {gen}: {best_individual['fitness']:.3f}")
-        #print(f"Best Individual in Generation {gen}: {fit:.3f}")
-
         if WANDB:
             wandb.log({"Best Fitness": best_fitness, "Mean Fitness": mean_fitness})
-        
         population = evolve_population(population)
-
     print("############## Evolution Complete ##############")
     print("Best Individuals:")
     for i, best_individual in enumerate(best_individuals):
         print(f"Generation {i}: {best_individual['fitness']:.3f}")
-        #print(f"Generation {i}: {best_individual}")
 
 def hardcoded(): # hardcoded gait cycle
     start_time = time.time()
