@@ -8,8 +8,8 @@ from controller import Robot, GPS, Supervisor
 ###########################################################################
 ## Constants
 ###########################################################################
+WANDB = False
 WANDB = True
-#WANDB = False
 NUM_GENERATIONS = 200
 POPULATION_SIZE = 100
 MUTATION_RATE = 0.015
@@ -209,8 +209,8 @@ def evaluate_OG(individual): # Evaluate fitness of an individual
 def evaluate(individual): # Evaluate fitness of an individual
     #print("individual: ", individual)
     reset_robot() # Reset robot to the initial state before evaluating each individual
-    robot.getDevice("RShoulderPitch").setPosition(1.6)  # move right arm down
-    robot.getDevice("LShoulderPitch").setPosition(1.6)  # move left arm down
+    robot.getDevice("RShoulderPitch").setPosition(0.6)  # move right arm down
+    robot.getDevice("LShoulderPitch").setPosition(0.6)  # move left arm down
     start_time = robot.getTime()
     initial_pos = gps.getValues()
     distance, total_forward_distance, height_sum, height_samples, height_bonus = 0.0, 0.0, 0.0, 0, 0.0
@@ -239,14 +239,14 @@ def evaluate(individual): # Evaluate fitness of an individual
         #print(height)
         
         if height > 0.1:
-            forward_distance = forward_distance * 2
-            height_bonus += 0.0001
-        elif height < 0.22:
-            forward_distance = forward_distance * 2.5
+            forward_distance = forward_distance * 1.5
             height_bonus += 0.0002
+        elif height < 0.22:
+            forward_distance = forward_distance * 2
+            height_bonus += 0.0004
         elif height < 0.31:
-            forward_distance = forward_distance * 3
-            height_bonus += 0.0003
+            forward_distance = forward_distance * 2.5
+            height_bonus += 0.0006
         
         if forward_distance > 0:
             total_forward_distance += forward_distance
@@ -380,11 +380,9 @@ def select_parent(population):
 
 def evolve_population(population): # Evolutionary process to create a new generation
     population.sort(key=lambda ind: ind["fitness"], reverse=True)
-    top_half = population[:POPULATION_SIZE // 2] # keep the top half of the population
-    new_population = population[:10] # keep the top 10 individuals
-    while len(new_population) < POPULATION_SIZE - 5:
-        #parent1, parent2 = select_parent(population), select_parent(population)
-        parent1, parent2 = select_parent(top_half), select_parent(top_half)
+    new_population = population[:25] # keep the top 20 individuals
+    while len(new_population) < POPULATION_SIZE - 3:
+        parent1, parent2 = select_parent(population), select_parent(population)
         child = crossover(parent1, parent2)
         new_population.append(child)
     while len(new_population) < POPULATION_SIZE:
@@ -392,16 +390,16 @@ def evolve_population(population): # Evolutionary process to create a new genera
     return new_population
 
 ##########################################################################################
-def main(): # Main Loop
+def run(): # Main Loop
     #population = [create_CPG_individual() for _ in range(POPULATION_SIZE)]
     #population = [create_position_individual() for _ in range(POPULATION_SIZE)]
     population = [create_cyclic_individual() for _ in range(POPULATION_SIZE)]
     best_individuals = []
     for gen in range(NUM_GENERATIONS):
         print(" ")
-        print("#####################################################")
+        print("#################################################")
         print(f"############## Generation {gen+1} ##############")
-        print("#####################################################")
+        print("#################################################")
         print(" ")
         for i, individual in enumerate(population):
             print(" ")
@@ -438,7 +436,7 @@ def hardcoded(): # hardcoded gait cycle
 
 ##########################################################################################
 if __name__ == "__main__":
-    main()
+    run()
     #test_population()
     #get_joint_limits()
     #hardcoded()
