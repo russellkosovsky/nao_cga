@@ -1,35 +1,35 @@
 ###########################################################################
-from controller import Robot, GPS, Supervisor
 import math
 import random
 import time
-from cycle import CYCLE
 import wandb
+import cycle
+from controller import Robot, GPS, Supervisor
 ###########################################################################
 ## Constants
 ###########################################################################
-WANDB = True
-#WANDB = False
+#WANDB = True
+WANDB = False
 NUM_GENERATIONS = 200
 POPULATION_SIZE = 100
 MUTATION_RATE = 0.03
-PARAMS = 10          # number of controlled motors
-NUM_ACTIVATIONS = 10 # number of actions (gait cycles per individual)
-TIME_STEP = 20       # default time step
-HEIGHT_WEIGHT = 0.4  # weight for the height component of the fitness
-JOINT_LIMITS = {     # joint limits for the Nao robot (for clamping)
-                #"LShoulderPitch": (-2.08567, 2.08567),
-                #"LShoulderRoll": (-0.314159, 1.32645),
-                #"LHipYawPitch": (-1.14529, 0.740718),
+PARAMS = 10           # number of controlled motors
+NUM_ACTIVATIONS = 10  # number of actions (gait cycles per individual)
+TIME_STEP = 20        # default time step
+HEIGHT_WEIGHT = 0.4   # weight for the height component of the fitness
+JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
+                "LShoulderPitch": (-2.08567, 2.08567),
+                "LShoulderRoll": (-0.314159, 1.32645),
+                "LHipYawPitch": (-1.14529, 0.740718),
                 "LHipRoll": (-0.379435, 0.79046),
                 "LHipPitch": (-1.77378, 0.48398),
                 "LKneePitch": (-0.0923279, 2.11255),
                 "LAnklePitch": (-1.18944, 0.922581),
                 "LAnkleRoll": (-0.39788, 0.769001),
                 #######################################
-                #"RShoulderPitch": (-2.08567, 2.08567),
-                #"RShoulderRoll": (-1.32645, 0.314159),
-                #"RHipYawPitch": (-1.14529, 0.740718),
+                "RShoulderPitch": (-2.08567, 2.08567),
+                "RShoulderRoll": (-1.32645, 0.314159),
+                "RHipYawPitch": (-1.14529, 0.740718),
                 "RHipRoll": (-0.738274, 0.449597),
                 "RHipPitch": (-1.77378, 0.48398),
                 "RKneePitch": (-0.0923279, 2.11255),
@@ -39,11 +39,11 @@ JOINT_LIMITS = {     # joint limits for the Nao robot (for clamping)
 
 if WANDB:
     wandb.init(
-        project="nao_cga", 
+        project="nao_cga",
         config={"num_generations": NUM_GENERATIONS,
                 "population_size": POPULATION_SIZE, 
-                "mutation_rate": MUTATION_RATE,
-                "num_joints": PARAMS,
+                "mutation_rate":   MUTATION_RATE,
+                "num_joints":      PARAMS,
                 "num_activations": NUM_ACTIVATIONS}
     )
 
@@ -57,10 +57,25 @@ gps.enable(TIME_STEP)
 ###########################################################################
 ## Motor Initialization
 ###########################################################################
-#motor_names = ["LShoulderPitch", "LShoulderRoll", "LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll",
- #              "RShoulderPitch", "RShoulderRoll", "RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
-motor_names = ["LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll",
-               "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch" "LAnkleRoll"]
+motor_names = [
+               #"LShoulderPitch",
+               #"LShoulderRoll",
+               #"LHipYawPitch",
+               "LHipRoll",
+               "LHipPitch",
+               "LKneePitch",
+               "LAnklePitch",
+               "LAnkleRoll",
+               ###############
+               #"RShoulderPitch",
+               #"RShoulderRoll",
+               #"RHipYawPitch",
+               "RHipRoll",
+               "RHipPitch",
+               "RKneePitch",
+               "RAnklePitch",
+               "RAnkleRoll"]
+
 motors = [robot.getDevice(name) for name in motor_names]
 for motor in motors:
     motor.setPosition(0.0)  # set all motors to default position
@@ -386,9 +401,9 @@ def hardcoded(): # hardcoded gait cycle
         cycle_time = time.time()
         cycle_end_time = cycle_time + 0.07 # 40 milliseconds per cycle
         while time.time() < cycle_end_time:
-            for cycle in CYCLE:
+            for cyc in cycle.CYCLE:
                 for j, motor in enumerate(motors):
-                    motor.setPosition(cycle[j])
+                    motor.setPosition(cyc[j])
                 robot.step(TIME_STEP)
 
 ##########################################################################################
