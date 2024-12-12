@@ -1,3 +1,29 @@
+"""
+Russell Kosovsky
+
+This controller uses a cyclic genetic algorithm to evolve a gait cycle for the
+Nao robot. The gait cycle is represented as a set of sine waves with amplitude,
+phase, and offset parameters for each joint. Amplitude, phase, and offset are
+used for central pattern generators (CPGs) to generate rhythmic patterns of
+movement for each motor in the robot. The gait activation (instance of motor 
+positions) is repeated for a fixed number of repetitions to produce a walking 
+motion. The fitness of each individual is evaluated based on the distance traveled 
+by the robot in the forward direction and the average height of the robot during 
+the simulation. The individuals with the highest fitness values are selected to 
+produce offspring through crossover and mutation. The process is repeated for 
+multiple generations to evolve agait cycle that maximizes the distance traveled by 
+the robot.
+
+The controller uses the Webots simulation environment to run the simulation and
+evaluate the fitness of each individual. The simulation is run for 20 seconds
+with a time step of 30 milliseconds. The fitness of each individual is calculated
+based on the distance traveled by the robot in the forward direction and the
+average height of the robot during the simulation. The individuals with the
+highest fitness values are selected to produce offspring through crossover and
+mutation. The process is repeated for multiple generations to evolve a gait cycle
+that maximizes the distance traveled by the robot.
+
+"""
 ###########################################################################
 import math
 import random
@@ -8,8 +34,8 @@ from controller import Robot, gps, Supervisor
 ###########################################################################
 ## Constants
 ###########################################################################
-WANDB = False
-#WANDB = True
+#WANDB = False
+WANDB = True
 NUM_GENERATIONS = 400
 POPULATION_SIZE = 200
 MUTATION_RATE = 0.003
@@ -17,25 +43,6 @@ NUM_MOTORS = 10           # number of controlled MOTORS
 NUM_ACTIVATIONS = 10  # number of actions (gait cycles per individual)
 TIME_STEP = 30        # default time step
 HEIGHT_WEIGHT = 8    # weight for the height component of the fitness
-"""JOINT_LIMITS = {      # joint limits for the Nao ROBOT (for clamping)
-                "LShoulderPitch": (-2.08567, 2.08567),
-                "LShoulderRoll": (-0.314159, 1.32645),
-                "LHipYawPitch": (-1.14529, 0.740718),
-                "LHipRoll": (-0.379435, 0.79046),
-                "LHipPitch": (-1.77378, 0.48398),
-                "LKneePitch": (-0.0923279, 2.11255),
-                "LAnklePitch": (-1.18944, 0.922581),
-                "LAnkleRoll": (-0.39788, 0.769001),
-                #######################################
-                "RShoulderPitch": (-2.08567, 2.08567),
-                "RShoulderRoll": (-1.32645, 0.314159),
-                "RHipYawPitch": (-1.14529, 0.740718),
-                "RHipRoll": (-0.738274, 0.449597),
-                "RHipPitch": (-1.77378, 0.48398),
-                "RKneePitch": (-0.0923279, 2.11255),
-                "RAnklePitch": (-1.1863, 0.932006),
-                "RAnkleRoll": (-0.768992, 0.397935)
-               } """
 JOINT_LIMITS = {      # restricted joint limits for the Nao ROBOT
                 "LShoulderPitch": (-2.0, 2.0),
                 "LShoulderRoll":  (-0.3, 1.3),
@@ -96,22 +103,22 @@ MOTOR_NAMES = [
                "RAnkleRoll"]
 
 MOTORS = [ROBOT.getDevice(name) for name in MOTOR_NAMES]
-for motor in MOTORS:
-    motor.setPosition(0.0)  # set all MOTORS to default position
+for motor in MOTORS: # set all MOTORS to default position
+    motor.setPosition(0.0)
 
 ###########################################################################
 ## Get the initial position and rotation of the ROBOT
 ###########################################################################
 ROOT = ROBOT.getRoot()  # get the ROOT node of the ROBOT
 CHILD_FIELD = ROOT.getField("children")  # get the children field of the ROOT node
-ROBOT_NODE = next((CHILD_FIELD.getMFNode(i) for i in range(CHILD_FIELD.getCount())
+ROBOT_NODE = next((CHILD_FIELD.getMFNode(i) for i in range(CHILD_FIELD.getCount()) 
                    if CHILD_FIELD.getMFNode(i).getTypeName() == "Nao"), None)
 TRANSLATION_FIELD = ROBOT_NODE.getField("translation")
 ROTATION_FIELD = ROBOT_NODE.getField("rotation")
 INITIAL_POSITION = TRANSLATION_FIELD.getSFVec3f()
 INITIAL_ROTATION = ROTATION_FIELD.getSFRotation()
 
-
+###########################################################################
 def get_joint_limits(): # use to find the limits for each motor
     for name in MOTOR_NAMES:
         curr_motor = ROBOT.getDevice(name)
@@ -133,6 +140,37 @@ def reset_robot(): # Reset the ROBOT to the initial state
 def clamp(value, min_value, max_value): # Clamp a value within a specific range
     return max(min(value, max_value), min_value)
 
+def mutate(individual):
+    for i in range(NUM_ACTIVATIONS):
+        for j in range(NUM_MOTORS):
+            if random.random() < MUTATION_RATE:
+                individual["amplitude"][0][i][j] += random.uniform(-0.05, 0.05)
+                individual["phase"][0][i][j] += random.uniform(-0.05, 0.05)
+                individual["offset"][0][i][j] += random.uniform(-0.05, 0.05)
+        if random.random() < MUTATION_RATE:
+            individual["repetitions"][0][i] += random.randint(-5, 5)
+
+def crossover(parent1, parent2):
+    child = Individual()
+    for i in range(NUM_ACTIVATIONS):
+        if random.choice([True, False]):
+            child.amplitude[0][i] = parent1.amplitude[0][i]
+            child.phase[0][i] = parent1.phase[0][i]
+            child.offset[0][i] = parent1.offset[0][i]
+            child.repetitions[i] = parent1.repetitions[i]
+        else:
+            child.amplitude[0][i] = parent2.amplitude[0][i]
+            child.phase[0][i] = parent2.phase[0][i]
+            child.offset[0][i] = parent2.offset[0][i]
+            child.repetitions[i] = parent2.repetitions[i]
+    mutate(child)
+    return child
+
+def select_parent(population):
+    total_fitness = sum(ind.fitness for ind in population)
+    selection_probs = [ind.fitness / total_fitness for ind in population] if total_fitness > 0 else None
+    return random.choices(population, weights=selection_probs, k=1)[0] if selection_probs else random.choice(population)
+###########################################################################
 
 class Individual: 
     def __init__(self):
@@ -207,42 +245,6 @@ class Individual:
         print("____            FITNESS:", round(fitness, 2))
         return self.fitness
 
-
-def mutate(individual):
-    for i in range(NUM_ACTIVATIONS):
-        for j in range(NUM_MOTORS):
-            if random.random() < MUTATION_RATE:
-                individual["amplitude"][0][i][j] += random.uniform(-0.05, 0.05)
-                individual["phase"][0][i][j] += random.uniform(-0.05, 0.05)
-                individual["offset"][0][i][j] += random.uniform(-0.05, 0.05)
-        if random.random() < MUTATION_RATE:
-            individual["repetitions"][0][i] += random.randint(-5, 5)
-
-def crossover(parent1, parent2):
-    child = create_cyclic_individual()
-    for i in range(NUM_ACTIVATIONS):
-        if random.choice([True, False]):
-            child["amplitude"][i] = parent1["amplitude"][i]
-            child["phase"][i] = parent1["phase"][i]
-            child["offset"][i] = parent1["offset"][i]
-            child["repetitions"][i] = parent1["repetitions"][i]
-        else:
-            child["amplitude"][i] = parent2["amplitude"][i]
-            child["phase"][i] = parent2["phase"][i]
-            child["offset"][i] = parent2["offset"][i]
-            child["repetitions"][i] = parent2["repetitions"][i]
-    mutate(child)
-    return child
-
-def select_parent(population):
-    total_fitness = sum(ind["fitness"] for ind in population)
-    selection_probs = [ind["fitness"] / total_fitness for ind in population] if total_fitness > 0 else None
-    return random.choices(population, weights=selection_probs, k=1)[0] if selection_probs else random.choice(population)
-
-def select_parent(population):
-    total_fitness = sum(ind.fitness for ind in population)
-    selection_probs = [ind.fitness / total_fitness for ind in population] if total_fitness > 0 else None
-    return random.choices(population, weights=selection_probs, k=1)[0] if selection_probs else random.choice(population)
 
 class population:
     def __init__(self, size):
