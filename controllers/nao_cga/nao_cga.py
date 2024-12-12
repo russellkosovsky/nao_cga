@@ -9,7 +9,7 @@ from controller import Robot, GPS, Supervisor
 ## Constants
 ###########################################################################
 WANDB = False
-WANDB = True
+#WANDB = True
 NUM_GENERATIONS = 200
 POPULATION_SIZE = 200
 MUTATION_RATE = 0.003
@@ -132,17 +132,17 @@ def reset_robot(): # Reset the robot to the initial state
 def clamp(value, min_value, max_value): # Clamp a value within a specific range
     return max(min(value, max_value), min_value)
 
-def create_CPG_individual(): # Create an individual with random motor parameters
-    return {"amplitude": [random.uniform(0, 0.5) for _ in range(PARAMS)],  ##amplitude of the sine wave
-            "phase": [random.uniform(0, 2 * math.pi) for _ in range(PARAMS)],  ##phase of the sine wave
-            "offset": [random.uniform(-0.5, 0.5) for _ in range(PARAMS)],  ##offset of the sine wave
-            "fitness": 0.0}  ##fitness value of the individual
-
 def create_cyclic_individual():
     return {"amplitude": [[random.uniform(0, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##amplitude of the sine wave
             "phase": [[random.uniform(0, 2 * math.pi) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##phase of the sine wave
             "offset": [[random.uniform(-0.5, 0.5) for _ in range(PARAMS)] for _ in range(NUM_ACTIVATIONS)],  ##offset of the sine wave
             "repetitions": [random.randint(10, 40) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
+            "fitness": 0.0}  ##fitness value of the individual
+
+def create_CPG_individual(): # Create an individual with random motor parameters
+    return {"amplitude": [random.uniform(0, 0.5) for _ in range(PARAMS)],  ##amplitude of the sine wave
+            "phase": [random.uniform(0, 2 * math.pi) for _ in range(PARAMS)],  ##phase of the sine wave
+            "offset": [random.uniform(-0.5, 0.5) for _ in range(PARAMS)],  ##offset of the sine wave
             "fitness": 0.0}  ##fitness value of the individual
 
 def create_position_individual(): # Create an individual with random motor positions rather than sin wave
@@ -155,6 +155,7 @@ def create_position_individual(): # Create an individual with random motor posit
             cycle.append(position)
         individual.append(cycle)
     return individual
+
 
 def test_population():
     pop_size = 5
@@ -209,8 +210,8 @@ def evaluate_OG(individual): # Evaluate fitness of an individual
 def evaluate(individual): # Evaluate fitness of an individual
     #print("individual: ", individual)
     reset_robot() # Reset robot to the initial state before evaluating each individual
-    robot.getDevice("RShoulderPitch").setPosition(0.6)  # move right arm down
-    robot.getDevice("LShoulderPitch").setPosition(0.6)  # move left arm down
+    robot.getDevice("RShoulderPitch").setPosition(1.5)  # move right arm down
+    robot.getDevice("LShoulderPitch").setPosition(1.5)  # move left arm down
     start_time = robot.getTime()
     initial_pos = gps.getValues()
     distance, total_forward_distance, height_sum, height_samples, height_bonus = 0.0, 0.0, 0.0, 0, 0.0
@@ -218,7 +219,7 @@ def evaluate(individual): # Evaluate fitness of an individual
     f = 0.75  # Gait frequency (Hz?)
 
     count, current_activation = 0, 0
-    while robot.getTime() - start_time < 10.0:  # Run the simulation for 20 seconds
+    while robot.getTime() - start_time < 12.0:  # Run the simulation for 20 seconds
         time = robot.getTime()
         for i, motor in enumerate(motors):  # iterate over all motors
             # motor position: y(t) = A * sin(2 * pi * f * t + phi) + C ## (AMPLITUDE * (sin (2 * pi * frequency * time + PHASE) + OFFSET))
@@ -272,7 +273,7 @@ def evaluate(individual): # Evaluate fitness of an individual
     print("____       height bonus:", height_bonus)
     print("____     total distance:", distance)
     print("____   forward distance:", total_forward_distance)
-    print("____            FITNESS:", fitness)
+    print("____            FITNESS:", round(fitness, 2))
     return individual["fitness"]
 
 def evaluate_positional(individual): # Evaluate fitness of an individual
@@ -332,7 +333,6 @@ def mutate_OG(individual):
             individual["amplitude"][i] += random.uniform(-0.05, 0.05)
             individual["phase"][i] += random.uniform(-0.05, 0.05)
             individual["offset"][i] += random.uniform(-0.05, 0.05)
-
 def mutate(individual):
     for i in range(NUM_ACTIVATIONS):
         for j in range(PARAMS):
@@ -404,9 +404,9 @@ def run(): # Main Loop
         print("#################################################")
         print(" ")
         for i, individual in enumerate(population):
-            print(" ")
-            print("------------------ Evaluating Individual", i+1, "------------------------")
-            print(" ")
+            print("____")
+            print("____ Evaluating Individual", i+1, " ------------------------------")
+            print("____")
             individual["fitness"] = evaluate(individual)
             reset_robot()
         
