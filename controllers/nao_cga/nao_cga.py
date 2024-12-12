@@ -177,7 +177,7 @@ class Individual:
         self.amplitude = [[random.uniform(0, 0.5) for _ in range(NUM_MOTORS)] for _ in range(NUM_ACTIVATIONS)],  ##amplitude of the sine wave
         self.phase = [[random.uniform(0, 2 * math.pi) for _ in range(NUM_MOTORS)] for _ in range(NUM_ACTIVATIONS)],  ##phase of the sine wave
         self.offset = [[random.uniform(-0.5, 0.5) for _ in range(NUM_MOTORS)] for _ in range(NUM_ACTIVATIONS)],  ##offset of the sine wave
-        self.repetitions = [random.randint(10, 40) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
+        self.repetitions = [random.randint(0, 60) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
         self.fitness = 0.0  ##fitness value of the individual
 
     def __str__(self):
@@ -191,13 +191,53 @@ class Individual:
         initial_pos = GPS.getValues()
         distance, total_forward_distance, height_sum, height_samples, height_bonus = 0.0, 0.0, 0.0, 0, 0.0
         prev_dist = 0
-        f = 0.75  # Gait frequency (Hz?)
-
+        f = 0.5  # Gait frequency (Hz?)
+        
         count, current_activation = 0, 0
-        while ROBOT.getTime() - start_time < 20.0:  # Run the simulation for 20 seconds
+        while ROBOT.getTime() - start_time < 10.0:  # Run the simulation for 20 seconds
             time = ROBOT.getTime()
             for i, motor in enumerate(MOTORS):  # iterate over all MOTORS
-                # motor position: y(t) = A * sin(2 * pi * f * t + phi) + C ## (AMPLITUDE * (sin (2 * pi * frequency * time + PHASE) + OFFSET))
+                
+                ''' motor position: y(t) = A * sin(2 * pi * f * t + phi) + 
+                                           C ## (AMPLITUDE * (sin (2 * pi * frequency * time + PHASE) + OFFSET))
+                    
+                    calculates the position of a component, likely a joint or limb of the NAO robot, based on a 
+                    sinusoidal function. This is a common approach in robotics to generate smooth, periodic movements.
+                        
+                        1. **Amplitude**: self.amplitude[0][current_activation][i]
+                            
+                            represents the amplitude of the sinusoidal wave. The amplitude determines the maximum 
+                            deviation from the central position.
+
+                        2. **Frequency**: f
+
+                            is the gait frequency, which was previously defined as `0.75 Hz`. This frequency dictates 
+                            how fast the sinusoidal wave oscillates.
+
+                        3. **Time**: time
+
+                            is a variable representing the current time, which is used to calculate the position at a 
+                            specific moment.
+
+                        4. **Phase**: self.phase[0][current_activation][i]
+
+                            represents the phase shift of the sinusoidal wave. The phase shift determines the horizontal 
+                            shift of the wave, allowing synchronization of different components.
+
+                        5. **Offset**: self.offset[0][current_activation][i]
+
+                            is the offset value added to the sinusoidal function, which shifts the entire wave vertically. 
+                            This is useful for setting a baseline position around which the oscillation occurs.
+
+                        The formula inside the math.sin function is 
+                            `2.0 * math.pi * f * time + self.phase[0][current_activation][i]`. 
+                        This represents the argument of the sine function, combining the angular frequency 
+                        (`2.0 * math.pi * f`), the current time, and the phase shift.
+
+                        Finally, the result of the sine function is multiplied by the amplitude and then the offset is 
+                        added. This gives the finalposition, which is a combination of the oscillatory movement defined 
+                        by the sine wave and the static offset.This approach allows for smooth and periodic movements, 
+                        which are essential for natural-looking gait patterns in humanoid robots like NAO.'''
                 position = (self.amplitude[0][current_activation][i] * math.sin(2.0 * math.pi * f * time + self.phase[0][current_activation][i]) + self.offset[0][current_activation][i])
                 motor_name = motor.getName()
                 if motor_name in JOINT_LIMITS: # value clamping based on joint limits
