@@ -144,11 +144,11 @@ def mutate(individual):
     for i in range(NUM_ACTIVATIONS):
         for j in range(NUM_MOTORS):
             if random.random() < MUTATION_RATE:
-                individual["amplitude"][0][i][j] += random.uniform(-0.05, 0.05)
-                individual["phase"][0][i][j] += random.uniform(-0.05, 0.05)
-                individual["offset"][0][i][j] += random.uniform(-0.05, 0.05)
+                individual.amplitude[0][i][j] += random.uniform(-0.05, 0.05)
+                individual.phase[0][i][j] += random.uniform(-0.05, 0.05)
+                individual.offset[0][i][j] += random.uniform(-0.05, 0.05)
         if random.random() < MUTATION_RATE:
-            individual["repetitions"][0][i] += random.randint(-5, 5)
+            individual.repetitions[0][i] += random.randint(-5, 5)
 
 def crossover(parent1, parent2):
     child = Individual()
@@ -157,12 +157,12 @@ def crossover(parent1, parent2):
             child.amplitude[0][i] = parent1.amplitude[0][i]
             child.phase[0][i] = parent1.phase[0][i]
             child.offset[0][i] = parent1.offset[0][i]
-            child.repetitions[i] = parent1.repetitions[i]
+            child.repetitions[0][i] = parent1.repetitions[0][i]
         else:
             child.amplitude[0][i] = parent2.amplitude[0][i]
             child.phase[0][i] = parent2.phase[0][i]
             child.offset[0][i] = parent2.offset[0][i]
-            child.repetitions[i] = parent2.repetitions[i]
+            child.repetitions[0][i] = parent2.repetitions[0][i]
     mutate(child)
     return child
 
