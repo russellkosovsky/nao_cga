@@ -10,12 +10,12 @@ from controller import Robot, GPS, Supervisor
 ###########################################################################
 WANDB = False
 #WANDB = True
-NUM_GENERATIONS = 200
+NUM_GENERATIONS = 400
 POPULATION_SIZE = 200
 MUTATION_RATE = 0.003
 PARAMS = 10           # number of controlled motors
-NUM_ACTIVATIONS = 8  # number of actions (gait cycles per individual)
-TIME_STEP = 20        # default time step
+NUM_ACTIVATIONS = 15  # number of actions (gait cycles per individual)
+TIME_STEP = 60        # default time step
 HEIGHT_WEIGHT = 8    # weight for the height component of the fitness
 """JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
                 "LShoulderPitch": (-2.08567, 2.08567),
@@ -264,7 +264,10 @@ def evaluate(individual): # Evaluate fitness of an individual
             #print("current_activation: ", current_activation, "-> reps: ", individual["repetitions"][current_activation])
     
     avg_height = height_sum / height_samples if height_samples > 0 else 0.0
-    fitness = distance + total_forward_distance + height_bonus + (avg_height * HEIGHT_WEIGHT)
+    
+    #fitness = distance + total_forward_distance + height_bonus + (avg_height * HEIGHT_WEIGHT)
+    fitness = total_forward_distance + height_bonus + (avg_height * HEIGHT_WEIGHT)
+
     #fitness = total_forward_distance + (avg_height * HEIGHT_WEIGHT)
     
     individual["fitness"] = fitness
@@ -380,10 +383,10 @@ def select_parent(population):
 
 def evolve_population(population): # Evolutionary process to create a new generation
     population.sort(key=lambda ind: ind["fitness"], reverse=True)
-    new_population = population[:25] # keep the top 20 individuals
+    new_population = population[:3] # keep the top 3 individuals
     for ind in new_population:
         mutate(ind)
-    while len(new_population) < POPULATION_SIZE - 3:
+    while len(new_population) < POPULATION_SIZE - 5:
         parent1, parent2 = select_parent(population), select_parent(population)
         child = crossover(parent1, parent2)
         new_population.append(child)
