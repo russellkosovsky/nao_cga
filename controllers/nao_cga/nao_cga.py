@@ -14,7 +14,7 @@ NUM_GENERATIONS = 400
 POPULATION_SIZE = 200
 MUTATION_RATE = 0.003
 NUM_MOTORS = 10           # number of controlled MOTORS
-NUM_ACTIVATIONS = 5  # number of actions (gait cycles per individual)
+NUM_ACTIVATIONS = 10  # number of actions (gait cycles per individual)
 TIME_STEP = 30        # default time step
 HEIGHT_WEIGHT = 8    # weight for the height component of the fitness
 """JOINT_LIMITS = {      # joint limits for the Nao ROBOT (for clamping)
@@ -144,13 +144,6 @@ class Individual:
 
     def __str__(self):
         return f"Amplitude: {self.amplitude}, Phase: {self.phase}, Offset: {self.offset}, Repetitions: {self.repetitions}, Fitness: {self.fitness}"
-    
-    def create_individual(self):
-        self.amplitude = [[random.uniform(0, 0.5) for _ in range(NUM_MOTORS)] for _ in range(NUM_ACTIVATIONS)],  ##amplitude of the sine wave
-        self.phase = [[random.uniform(0, 2 * math.pi) for _ in range(NUM_MOTORS)] for _ in range(NUM_ACTIVATIONS)],  ##phase of the sine wave
-        self.offset = [[random.uniform(-0.5, 0.5) for _ in range(NUM_MOTORS)] for _ in range(NUM_ACTIVATIONS)],  ##offset of the sine wave
-        self.repetitions = [random.randint(10, 40) for _ in range(NUM_ACTIVATIONS)],  ##number of repetitions of the gait cycle
-        self.fitness = 0.0  ##fitness value of the individual
 
     def evaluate(self):
         reset_robot()
@@ -219,11 +212,11 @@ def mutate(individual):
     for i in range(NUM_ACTIVATIONS):
         for j in range(NUM_MOTORS):
             if random.random() < MUTATION_RATE:
-                individual["amplitude"][i][j] += random.uniform(-0.05, 0.05)
-                individual["phase"][i][j] += random.uniform(-0.05, 0.05)
-                individual["offset"][i][j] += random.uniform(-0.05, 0.05)
+                individual["amplitude"][0][i][j] += random.uniform(-0.05, 0.05)
+                individual["phase"][0][i][j] += random.uniform(-0.05, 0.05)
+                individual["offset"][0][i][j] += random.uniform(-0.05, 0.05)
         if random.random() < MUTATION_RATE:
-            individual["repetitions"][i] += random.randint(-5, 5)
+            individual["repetitions"][0][i] += random.randint(-5, 5)
 
 def crossover(parent1, parent2):
     child = create_cyclic_individual()
