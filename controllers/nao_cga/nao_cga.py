@@ -11,12 +11,12 @@ from controller import Robot, GPS, Supervisor
 WANDB = False
 WANDB = True
 NUM_GENERATIONS = 200
-POPULATION_SIZE = 100
+POPULATION_SIZE = 200
 MUTATION_RATE = 0.003
 PARAMS = 10           # number of controlled motors
-NUM_ACTIVATIONS = 20  # number of actions (gait cycles per individual)
+NUM_ACTIVATIONS = 8  # number of actions (gait cycles per individual)
 TIME_STEP = 20        # default time step
-HEIGHT_WEIGHT = 10    # weight for the height component of the fitness
+HEIGHT_WEIGHT = 8    # weight for the height component of the fitness
 """JOINT_LIMITS = {      # joint limits for the Nao robot (for clamping)
                 "LShoulderPitch": (-2.08567, 2.08567),
                 "LShoulderRoll": (-0.314159, 1.32645),
