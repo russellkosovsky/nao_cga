@@ -197,7 +197,6 @@ class Individual:
         while ROBOT.getTime() - start_time < 10.0:  # Run the simulation for 20 seconds
             time = ROBOT.getTime()
             for i, motor in enumerate(MOTORS):  # iterate over all MOTORS
-                
                 ''' motor position: y(t) = A * sin(2 * pi * f * t + phi) + 
                                            C ## (AMPLITUDE * (sin (2 * pi * frequency * time + PHASE) + OFFSET))
                     
@@ -276,6 +275,7 @@ class Individual:
 
         avg_height = height_sum / height_samples if height_samples > 0 else 0.0
         fitness = total_forward_distance + height_bonus + (avg_height * HEIGHT_WEIGHT)
+        fitness = distance + height_bonus + (avg_height * HEIGHT_WEIGHT)
         self.fitness = fitness
         print("____     average height:", avg_height)
         print("____         height sum:", height_sum * .01)
@@ -310,15 +310,13 @@ class population:
     
     def evolve_population(self):
         self.population.sort(key=lambda ind: ind.fitness, reverse=True)
-        new_population = self.population[:3] # keep the top 3 individuals
+        new_population = self.population[:20] # keep the top 20 individuals
         for ind in new_population:
             mutate(ind)
-        while len(new_population) < POPULATION_SIZE - 5:
+        while len(new_population) < POPULATION_SIZE:
             parent1, parent2 = select_parent(self.population), select_parent(self.population)
             child = crossover(parent1, parent2)
             new_population.append(child)
-        while len(new_population) < POPULATION_SIZE:
-            new_population.append(Individual())
         self.population = new_population
 
     def test_population(self):
@@ -358,7 +356,7 @@ def run(): # Main Loop using population and individiual classes
         best_individual = pop.get_best_individual()
         print(f"Best Individual in Generation {gen}: {best_individual.fitness:.3f}")
         if WANDB:
-            wandb.log({"Best Fitness": best_individual.fitness})
+            wandb.log({"Best Fitness": best_individual.fitness, "Mean Fitness": sum(ind.fitness for ind in pop.population) / POPULATION_SIZE})
         pop.evolve_population()
     print("############## Evolution Complete ##############")
     best_individual = pop.get_best_individual()
