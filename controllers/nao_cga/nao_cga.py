@@ -29,7 +29,7 @@ import math
 import random
 import time
 import wandb
-import cycle 
+import cycle
 from controller import Robot, gps, Supervisor
 ###########################################################################
 ## Constants
@@ -41,7 +41,7 @@ POPULATION_SIZE = 200
 MUTATION_RATE = 0.003
 NUM_MOTORS = 10           # number of controlled MOTORS
 NUM_ACTIVATIONS = 10  # number of actions (gait cycles per individual)
-TIME_STEP = 30        # default time step
+TIME_STEP = 20        # default time step
 HEIGHT_WEIGHT = 8    # weight for the height component of the fitness
 JOINT_LIMITS = {      # restricted joint limits for the Nao ROBOT
                 "LShoulderPitch": (-2.0, 2.0),
@@ -275,7 +275,7 @@ class Individual:
 
         avg_height = height_sum / height_samples if height_samples > 0 else 0.0
         fitness = total_forward_distance + height_bonus + (avg_height * HEIGHT_WEIGHT)
-        fitness = distance + height_bonus + (avg_height * HEIGHT_WEIGHT)
+        #fitness = distance + height_bonus + (avg_height * HEIGHT_WEIGHT)
         self.fitness = fitness
         print("____     average height:", avg_height)
         print("____         height sum:", height_sum * .01)

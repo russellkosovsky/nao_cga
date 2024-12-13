@@ -15,8 +15,8 @@ WorldInfo {
   ]
   title "Humanoid Sprint"
   window "humanoid_sprint"
-  basicTimeStep 30
-  FPS 30
+  basicTimeStep 20
+  FPS 20
   contactProperties [
     ContactProperties {
       material1 "NAO foot material"
